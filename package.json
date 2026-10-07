@@ -1,9 +1,0 @@
-{
-  "name": "beskonechnaya-niva-3d",
-  "version": "0.20.0",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "test": "node tests/stage20.test.mjs && node tests/mechanical19.test.mjs && node tests/scenery18.test.mjs && node tests/balance17.test.mjs && node tests/weather16.test.mjs && node tests/animals16.test.mjs && node tests/hud15.test.mjs && node tests/optional-music-pwa15.test.mjs && node tests/stage15.test.mjs && node tests/music15.test.mjs && node tests/run14.test.mjs && node tests/event-audio14.test.mjs && node tests/traffic13.test.mjs && node tests/biomes.test.mjs && node tests/feedback11.test.mjs && node tests/events.test.mjs && node tests/feedback.test.mjs && node tests/hills.test.mjs && node tests/gearbox.test.mjs && node tests/vehicle.test.mjs && node tests/surfaces.test.mjs && node tests/visual.test.mjs && node tests/world.test.mjs && node tests/rally.test.mjs && node tests/jump.test.mjs && node tests/scene.test.mjs && node tests/orientation.test.mjs && node tests/audio.test.mjs && node tests/pwa.test.mjs && node tests/endurance.test.mjs"
-  }
-}

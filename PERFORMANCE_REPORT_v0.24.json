@@ -1,0 +1,78 @@
+{
+  "release": "0.24",
+  "scope": "headless CPU simulation; not mobile FPS",
+  "benchmark": {
+    "seed": 731024,
+    "simulatedSeconds": 120,
+    "before": {
+      "source": "/workspace/scratch/dac828213024/beskonechnaya-niva-3d-v0.23",
+      "simulatedSeconds": 120,
+      "wallSeconds": 16.917951193,
+      "cpuSeconds": 19.512235,
+      "aiTicks": 194400,
+      "racers": 10,
+      "playerFixedStep": 0.005555555555555556,
+      "finalRates": [
+        180,
+        180,
+        180,
+        180,
+        180,
+        180,
+        180,
+        180,
+        180
+      ]
+    },
+    "after": {
+      "source": "/workspace/scratch/dac828213024/beskonechnaya-niva-3d-v0.24",
+      "simulatedSeconds": 120,
+      "wallSeconds": 9.082732294,
+      "cpuSeconds": 11.313877,
+      "aiTicks": 160830,
+      "racers": 10,
+      "playerFixedStep": 0.005555555555555556,
+      "finalRates": [
+        60,
+        90,
+        180,
+        90,
+        180,
+        90,
+        180,
+        180,
+        180
+      ]
+    },
+    "cpuReductionPercent": 42.02
+  },
+  "player": {
+    "fixedStep": 0.005555555555555556,
+    "30SecondTrajectoryMatchesV023": true
+  },
+  "counts": {
+    "tapes": 63,
+    "spectators": 98,
+    "trees": 175,
+    "houses": 12,
+    "cows": 1,
+    "chickens": 0,
+    "farmers": 0
+  },
+  "validation": [
+    "regression suite",
+    "30-second GAS lifecycle",
+    "physical three-lap cup",
+    "physical 10km sprint",
+    "600-second bounded ENDLESS simulation",
+    "repeated CIRCUIT/SPRINT decor-only rebuild retains tape batches without duplicates",
+    "fuel/odometer at 30,60,120FPS",
+    "adaptive DPR recovery",
+    "original player trajectory"
+  ],
+  "unverified": [
+    "real iPhone FPS and GPU timings",
+    "real night/rain visual quality",
+    "ten-minute on-device GC spike behaviour"
+  ]
+}

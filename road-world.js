@@ -43,7 +43,7 @@ export class RoadWorld{
  // Every heading remains forward in Z, including rare tight hairpin bends.
  const id=this.nextId++,startDistance=previous?previous.startDistance+previous.length:0,section={id,type,biomeProfile:this.offroadMode?{type:'FOREST',previous:'FOREST',start:0,id:0,name:''}:this.biomes.sample(startDistance),localFeatures:[],hill:null,decorationRevision:0,mode:FAST_TYPES.includes(type)?'FAST':'TECH',length,width:entry.width,entryTransform:entry,startDistance,difficulty,template,surface:'DIRT',obstacles:[],nodes:[],decorations:[]};const step=['RUT_GAUNTLET','FOREST_FORD'].includes(type)?.75:['ROCK_SECTION','CHICANE','RUTS','FALLEN_LOGS'].includes(type)?.5:1.5;
  if(['FAST_HILL','TECHNICAL_HILL','STEEP_DESCENT'].includes(type)){const extreme=type!=='FAST_HILL'&&this.random()<HILL_CONFIG.extremeChance,angle=type==='FAST_HILL'?HILL_CONFIG.light[difficulty]:type==='TECHNICAL_HILL'?(extreme?HILL_CONFIG.extreme[difficulty]:HILL_CONFIG.hard[difficulty]):extreme?HILL_CONFIG.extremeDescent:HILL_CONFIG.descent[difficulty],span=type==='FAST_HILL'?81:extreme?16:27,ramp=type==='FAST_HILL'?6:4;section.hill={category:extreme?'EXTREME':type==='FAST_HILL'?'LIGHT':'HARD',angle,span,ramp,start:length*(type==='FAST_HILL'?.30:.40),exitRamp:type==='FAST_HILL'?55:ramp,sign:type==='STEEP_DESCENT'?-1:type==='FAST_HILL'?sign:1};section.crestSafe=true;}
- if(this.offroadMode&&type==='MUD_CLIMB')section.hill={category:'HARD',angle:[19,23,27][difficulty],span:39,ramp:8,start:length*.31,exitRamp:8,sign:1};
+ if(this.offroadMode&&type==='MUD_CLIMB')section.hill={category:'HARD',angle:[14,16,18][difficulty],span:39,ramp:8,start:length*.31,exitRamp:8,sign:1};
  if(JUMP_TYPES.includes(type))section.crestSafe=true;section.asphalt=!this.offroadMode&&!['CHICANE','RUTS','ROCK_SECTION','LOG_CROSSING','WASHOUT','TECHNICAL_HILL',...JUMP_TYPES].includes(type)&&(section.biomeProfile.type==='VILLAGE'||startDistance%1500>1125);section.surface=this.offroadMode&&!['SHORT_STRAIGHT','EXIT'].includes(type)?'SOFT_DIRT':section.asphalt?'ASPHALT':'DIRT';this.populateEvents(section);
  if(type==='LOG_CROSSING')for(let i=0;i<5;i++)section.localFeatures.push({kind:'LOG_MEDIUM',u:.38+i*.05,lateral:0,...OBSTACLE_CONFIG.types.LOG_MEDIUM,radius:2.3});
  if(type==='BUMP_CHAIN')for(let i=0;i<4;i++)section.localFeatures.push({kind:'BUMP',u:.30+i*.12,lateral:i%2?.8:-.8,...OBSTACLE_CONFIG.types.BUMP,radius:2});
@@ -59,7 +59,7 @@ export class RoadWorld{
    const pathShift=this.random()<.73?(this.random()<.5?-1:1)*(.38+this.random()*.57):0;
    const pathWander=.12+this.random()*.14,pathPhase=this.random()*6.28;
    const track={shape:'long_rut',startU,endU,longRadius:1,pathShift,pathWander,pathPhase};
-   for(const side of [-1,1])add('MUD_STRIP',.52,side*.91,{...track,radius:hill?.43:.48,mudDepth:hill?.74:.82,height:-depth});
+   for(const side of [-1,1])add('MUD_STRIP',.52,side*.91,{...track,radius:hill?.43:.48,mudDepth:hill?.52:.82,height:-depth});
    add('SOFT_PATCH',.52,0,{...track,radius:.32,height:hill?.055:.075});
   }
   if(type==='FOREST_FORD'){
@@ -68,7 +68,7 @@ export class RoadWorld{
    add('PUDDLE',.52,0,{shape:'river',radius:section.width/2+11,longRadius:6.8+this.random()*1.9,waterDepth:depth,height:-depth*.82});
   }
   if(type==='FALLEN_LOGS')for(const u of [.40,.57,.76])add('LOG_LARGE',u,(this.random()-.5)*.45,{radius:section.width/2+.6,longRadius:.55,height:.31+this.random()*.11});
-  if(type==='MUD_CLIMB')for(const u of [.35,.50,.64,.78])add('MUD_MEDIUM',u,(this.random()-.5)*.7,{radius:1.65,longRadius:4,mudDepth:.68,height:-.065});
+  if(type==='MUD_CLIMB')for(const u of [.35,.50,.64,.78])add('MUD_MEDIUM',u,(this.random()-.5)*.7,{radius:1.65,longRadius:4,mudDepth:.41,height:-.050});
   if(type==='TIGHT_TURNS')for(const u of [.32,.72])add('SOFT_PATCH',u,(this.random()-.5)*1.8,{radius:1.55,longRadius:3});
  }
  const count=Math.ceil(length/step),samples=new Set(Array.from({length:count+1},(_,i)=>i*length/count));for(const o of section.localFeatures){if(o.shape==='long_rut'||o.shape==='river')continue;for(let d=-o.longRadius*OBSTACLE_CONFIG.detailRadius;d<=o.longRadius*OBSTACLE_CONFIG.detailRadius;d+=(o.shape==='log'?OBSTACLE_CONFIG.logSamplingStep:o.surfaceType&&o.surfaceType!=='ROCK'?OBSTACLE_CONFIG.surfaceSamplingStep:OBSTACLE_CONFIG.samplingStep))samples.add(clamp(o.u*length+d,0,length));}const distances=[...samples].sort((a,b)=>a-b).filter((d,i,all)=>!i||d-all[i-1]>.005);let x=entry.x,z=entry.z,lastDistance=0;

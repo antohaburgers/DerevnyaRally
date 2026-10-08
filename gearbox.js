@@ -3,9 +3,10 @@ const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 export const GEARBOX_CONFIG={
   baseUpRPM:2200,fullUpRPM:5350,throttleExponent:1.25,
   coastDownRPM:1250,urgentDownRPM:1650,
+  driveRecoveryThrottle:.55,driveRecoveryRPM:2100,
   recoveryTargetRPM:2450,recoveryMaxRPM:5200,
   kickdownThrottle:.88,kickdownDelay:.65,kickdownCurrentMaxRPM:4250,
-  kickdownFromFifthRPM:5100,kickdownOtherRPM:4550,
+  kickdownFromFifthRPM:5100,kickdownOtherRPM:3900,
   loadThreshold:.78,loadDownRPM:2050,loadDownDelay:.9,
   rapidDecelKmhPerSecond:14,rapidDecelMemory:.75,
   lowUpRPM:[2800,3700],lowDownRPM:1550,
@@ -58,14 +59,19 @@ export function chooseShift(state,c){
   }
   const isUrgent=(state.rapidDecelHold||0)>0||(state.brake||0)>.35;
   const rpmThreshold=isUrgent?tune.urgentDownRPM:tune.coastDownRPM;
-  if(g>1&&(speed<5||currentRoadRPM<rpmThreshold)){
+  // An under-geared car needs a road-speed recovery, not a delayed one-step kickdown.
+  // Real vehicle speed is authoritative after jumps even if the wheels are still spinning.
+  const needsDriveGear=(state.brake||0)<.2&&throttle>=tune.driveRecoveryThrottle&&currentRoadRPM<tune.driveRecoveryRPM;
+  if(g>1&&(speed<5||currentRoadRPM<rpmThreshold||needsDriveGear)){
     const target=recoveryGear(speed,g,c);
     if(target<g)return{gear:target,event:'RECOVERY'};
   }
   if(safeDown&&(state.kickdownHold||0)>=tune.kickdownDelay&&state.currentRPM<tune.kickdownCurrentMaxRPM&&nextRoadRPM<(g===5?tune.kickdownFromFifthRPM:tune.kickdownOtherRPM))return{gear:g-1,event:'KICKDOWN'};
   if(safeDown&&(state.lugHold||0)>=tune.loadDownDelay)return{gear:g-1,event:'DOWNSHIFT'};
   const upRPM=Math.min(c.redlineRPM-650,tune.baseUpRPM+(tune.fullUpRPM-tune.baseUpRPM)*Math.pow(throttle,tune.throttleExponent));
-  if(g<5&&speed>4&&state.currentRPM>=upRPM)return{gear:g+1,event:'UPSHIFT'};
+  // Prevent a freshly recovered gear from upshifting merely because its wheels spin in the air.
+  const recoveryUpshiftReady=state.shiftEvent!=='RECOVERY'||currentRoadRPM>=upRPM*.75;
+  if(g<5&&speed>4&&!state.airborne&&recoveryUpshiftReady&&state.currentRPM>=upRPM)return{gear:g+1,event:'UPSHIFT'};
   return null;
 }
 export function speedTorqueFactor(speed,range,tune=GEARBOX_CONFIG){

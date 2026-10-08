@@ -7,7 +7,7 @@ import {PropCollisions} from './props.js?v=028';
 import {Pickups} from './pickups.js?v=028';
 import {CIRCUIT_CONFIG} from './circuit-world.js?v=028';
 import {boxContact} from './colliders.js?v=028';
-export const GAME_MODE={ENDLESS:'ENDLESS',CIRCUIT:'CIRCUIT',SPRINT_5:'SPRINT_5',SPRINT_10:'SPRINT_10'};
+export const GAME_MODE={ENDLESS:'ENDLESS',OFFROAD:'OFFROAD',CIRCUIT:'CIRCUIT',SPRINT_5:'SPRINT_5',SPRINT_10:'SPRINT_10'};
 export const isRaceMode=mode=>mode===GAME_MODE.CIRCUIT||mode===GAME_MODE.SPRINT_5||mode===GAME_MODE.SPRINT_10;
 export const RACE_CONFIG={laps:3,racers:10,countdown:10,cupKey:'niva3d.cupStats.v1',aiSpeeds:[29,32,30,33,28.8,32.5,30.5,31,29.2],colors:[[.90,.88,.80],[.70,.18,.13],[.18,.34,.62],[.24,.47,.27],[.70,.61,.43],[.80,.80,.71],[.58,.22,.18],[.22,.41,.61],[.38,.52,.34]]};
 export const AI_NAMES='Кузьмич|Петрович|Михалыч|Палыч|Саныч|Иваныч|Семёныч|Егорыч|Дядя Гена|Дядя Витя|Батя|Просто Серёга|Тихий Лёха|Толян|Валерыч|Геннадий|Ветеран|Призрачный Гонщик|Колхозный Стиг|Сельский Сенна|Шумахер из Катышки|Король Обочины|Грязевой Барон|Дрифт-Дед|Пивной Рейсер|Геннадий Турбо|Ночной Хмырь|Бешеный Петрович|Безумный Кузьмич|Дед на Полном|Последний Самоблок|Тракторист 3000|Неубиваемый|Чёрный Бампер|Синий Дым|Правый Привод|Левый Привод|Три Колеса|Живой Кардан|Злой Карбюратор|Дед Блокировка|Грязный Санёк|Обочинный Волк|Лесной Шумахер|Катышкинский Демон|Великий Петрович|Последний Колхозник|Ржавый Барон|Без Тормозов|Батя на Ниве'.split('|');

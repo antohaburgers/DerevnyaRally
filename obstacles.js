@@ -19,7 +19,7 @@ export function obstacleWeight(o,u,lateral,length){
  if(o.shape==='long_rut'){
   const smooth=t=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t);};
   const along=smooth((u-o.startU)/.085)*smooth((o.endU-u)/.085);
-  const center=o.lateral+.10*Math.sin(u*14+o.phase);
+  const center=o.lateral+(o.pathShift||0)+(o.pathWander||0)*(Math.sin(u*9+(o.pathPhase||0))-Math.sin(o.pathPhase||0));
   const across=(lateral-center)/o.radius;
   return along*Math.exp(-1.4*across*across);
  }

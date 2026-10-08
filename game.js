@@ -164,16 +164,32 @@ const rearGlass=[[-.665,1.235],[.665,1.235],[.665,1.555],[.614,1.615],[-.614,1.6
 panel(rearOutline.map(([x,y])=>[x,y,rearPlane(y,.009)]),dark);
 panel(rearGlass.map(([x,y])=>[x,y,rearPlane(y,.014)]),glass);
 const archDetails=[];for(const side of [-1,1])for(const centre of [-1.1,1.1])for(let i=0;i<18;i++){const a=.18+i*(Math.PI-.36)/18,b=.18+(i+1)*(Math.PI-.36)/18;const points=[];for(const [angle,radius] of [[a,.512],[b,.512],[b,.555],[a,.555]])points.push([side*.846,.44+Math.sin(angle)*radius,centre+Math.cos(angle)*radius]);archDetails.push(polygonMesh(points));}
-const wideArchDetails=[];for(const side of [-1,1])for(const centre of [-1.1,1.1])for(let i=0;i<9;i++){
- const a=.20+i*(Math.PI-.40)/9,b=.20+(i+1)*(Math.PI-.40)/9;
- wideArchDetails.push(polygonMesh([[a,.515],[b,.515],[b,.635],[a,.635]].map(([angle,r])=>[side*.895,.44+Math.sin(angle)*r,centre+Math.cos(angle)*r])));
+// One combined render batch for all four flared arches.
+const wideArchV=[],wideArchN=[];
+for(const side of [-1,1])for(const centre of [-1.1,1.1])for(let i=0;i<12;i++){
+ const a=.20+i*(Math.PI-.40)/12,b=.20+(i+1)*(Math.PI-.40)/12,
+ pts=[[a,.515],[b,.515],[b,.635],[a,.635]].map(([angle,r])=>[side*.895,.44+Math.sin(angle)*r,centre+Math.cos(angle)*r]);
+ for(const index of [0,1,2,0,2,3]){wideArchV.push(...pts[index]);wideArchN.push(side,0,0);}
 }
+const wideArchMesh=mesh(wideArchV,wideArchN);
+// All aggressive tyre tread blocks share one mesh per wheel, rather than 8 draw calls.
+const treadV=[],treadN=[];
+for(let i=0;i<8;i++){
+ const a=i*Math.PI/4,c=Math.cos(a),sn=Math.sin(a);
+ for(let j=0;j<cube.rawV.length;j+=3){
+  const x=cube.rawV[j]*.31, y=CAR_CONFIG.wheelRadius-.040+cube.rawV[j+1]*.065,z=cube.rawV[j+2]*.16;
+  treadV.push(x,y*c-z*sn,y*sn+z*c);
+  const nx=cube.rawN[j],ny=cube.rawN[j+1],nz=cube.rawN[j+2];
+  treadN.push(nx,ny*c-nz*sn,ny*sn+nz*c);
+ }
+}
+const offroadTreadMesh=mesh(treadV,treadN);
 function linePart(a,b,width,color){const direction=norm(b.map((v,i)=>v-a[i])),right=norm(cross(direction,Math.abs(direction[1])>.9?[1,0,0]:[0,1,0])),up=cross(direction,right),length=Math.hypot(...b.map((v,i)=>v-a[i])),mid=a.map((v,i)=>(v+b[i])/2);const m=new Float32Array([...right.map(v=>v*width),0,...up.map(v=>v*width),0,...direction.map(v=>v*length),0,...mid,1]);draw(cube,mul(body,m),color);}
 let body;function part(x,y,z,sx,sy,sz,col){draw(cube,mul(body,matrix(x,y,z,sx,sy,sz)),col);}const facing=new Float32Array([1,0,0,0,0,0,1,0,0,-1,0,0,0,0,0,1]);function roundPart(x,y,z,r,depth,col){draw(cylinder,mul(mul(body,matrix(x,y,z,1,1,1)),mul(facing,matrix(0,0,0,r,depth,r))),col);}
 function vehicle(){body=visual.matrix;const paint=PAINTS[garageBuild.color]||green;draw(shell,body,paint);draw(cabin,body,paint);draw(roof,body,paint);draw(bonnet,body,paint);for(const panel of glazing)draw(panel.shape,body,panel.color);
 part(0,.49,0,1.32,.12,2.6,dark);
 // Thin arch mouldings, roof gutters, bonnet stampings and wipers.
-for(const arch of archDetails)draw(arch,body,[.23,.32,.28]);if(garageBuild.arches)for(const arch of wideArchDetails)draw(arch,body,[.050,.057,.049]);
+for(const arch of archDetails)draw(arch,body,[.23,.32,.28]);if(garageBuild.arches)draw(wideArchMesh,body,[.050,.057,.049]);
 for(const side of [-1,1]){linePart([side*.82,1.699,-1.35],[side*.82,1.699,.12],.018,chrome);linePart([side*.66,bonnetTop(side*.66,.81)+.004,.81],[side*.66,bonnetTop(side*.66,1.68)+.004,1.68],.012,[.29,.38,.33]);linePart([side*.44,1.276,frontPlane(1.276,.027)],[side*.16,1.301,frontPlane(1.301,.027)],.014,dark);linePart([side*.838,1.14,.74],[side*.838,1.12,1.72],.01,dark);part(side*.845,1.08,.96,.009,.055,.14,[.76,.47,.16]);}
 // Tailgate perimeter, rear wiper, vents and small licence plates.
 linePart([-.73,.71,-1.837],[.73,.71,-1.837],.013,dark);for(const side of [-1,1])linePart([side*.73,.72,-1.837],[side*.73,1.12,-1.837],.013,dark);linePart([.03,1.245,rearPlane(1.245,.025)],[.34,1.27,rearPlane(1.27,.025)],.016,dark);part(0,.648,1.989,.40,.083,.014,[.81,.81,.72]);
@@ -215,7 +231,7 @@ function drawGarageLivery(livery){
 // Rear beam follows both independent wheel contacts.
 const left=visual.wheels[2].position,right=visual.wheels[3].position,beam=norm(right.map((v,i)=>v-left[i])),beamUp=norm(cross(rotate(visual.q,[0,0,1]),beam)),beamSide=cross(beam,beamUp),mid=left.map((v,i)=>(v+right[i])/2);draw(cube,new Float32Array([...beam.map(v=>v*1.70),0,...beamUp.map(v=>v*.12),0,...beamSide.map(v=>v*.12),0,...mid,1]),dark);
 for(const w of visual.wheels){if(w.detached)continue;const up=rotate(visual.q,[0,1,0]),localForward=rotate(visual.q,[Math.sin(w.steer),0,Math.cos(w.steer)]),axis=w.front?norm(cross(up,localForward)):beam,wheelUp=norm(cross(localForward,axis));let m=new Float32Array([...axis,0,...wheelUp,0,...localForward,0,...w.position.map((v,i)=>v-(i===1?w.visualSink||0:0)),1]);m=mul(m,rotateX(w.angle));const axle=(diameter,width)=>new Float32Array([0,diameter,0,0,-width,0,0,0,0,0,diameter,0,0,0,0,1]);draw(cylinder,mul(m,axle(CAR_CONFIG.wheelRadius*2,.25)),rubber);
- if(garageBuild.tires==='offroad')for(let i=0;i<8;i++){const a=i*Math.PI/4;draw(cube,mul(m,mul(rotateX(a),matrix(0,CAR_CONFIG.wheelRadius-.018,0,.30,.065,.16))),[.060,.077,.064]);}
+ if(garageBuild.tires==='offroad')draw(offroadTreadMesh,m,[.060,.077,.064]);
  draw(cylinder,mul(m,axle(garageBuild.tires==='offroad'?.54:.53,.259)),garageBuild.tires==='offroad'?[.24,.28,.26]:chrome);
  draw(cylinder,mul(m,axle(.17,.275)),garageBuild.tires==='offroad'?[.68,.69,.62]:[.40,.44,.41]);
  for(let i=0;i<6;i++){const a=i*Math.PI/3,local=matrix(Math.sign(w.x)*.134,Math.cos(a)*.18,Math.sin(a)*.18,1,1,1);draw(cylinder,mul(m,mul(local,axle(.075,.008))),dark);}}}

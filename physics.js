@@ -1,4 +1,4 @@
-import {GEARBOX_CONFIG,chooseShift,updateGearboxIntent,speedTorqueFactor} from './gearbox.js?v=031';
+import {GEARBOX_CONFIG,chooseShift,updateGearboxIntent,speedTorqueFactor} from './gearbox.js?v=034';
 import {SURFACE_SETTINGS} from './surfaces.js?v=028';
 // Four vertical heightfield casts + one free rigid chassis. SI units throughout.
 export const CAR_CONFIG={gearbox:GEARBOX_CONFIG,mass:1280,centerOfMass:[0,.82,0],inertia:[1580,1880,640],gravity:9.81,wheelRadius:.44,wheelInertia:2.4,mountHeight:.94,track:1.72,wheelbase:2.24,springRate:{front:27000,rear:25000},damping:{front:4300,rear:4000},suspensionTravel:{front:{compression:.145,droop:.115,rest:.62},rear:{compression:.165,droop:.145,rest:.64}},antiRoll:{front:5000,rear:850},rearAxleCoupling:1000,bumpStop:85000,maxSpringForce:21000,gearRatios:[3.67,2.10,1.36,1,.82],reverseRatio:3.53,finalDrive:3.9,highRangeRatio:1.42,lowRangeRatio:2.1,engineTorqueCurve:[[850,100],[1400,154],[2200,197],[3200,209],[4200,190],[5200,145],[6000,83],[6200,0]],idleRPM:850,redlineRPM:6200,engineBraking:25,engineResponse:7,maxReverseSpeed:5.5,drivetrainEfficiency:.86,shiftDuration:GEARBOX_CONFIG.shiftDuration,shiftCooldown:GEARBOX_CONFIG.upCooldown,upshiftRPM:[3150,5100],downshiftRPM:1450,tyreGrip:{grass:.76,road:.90,pavement:1.12},tyreLongStiffness:7.5,tyreSideStiffness:4.0,tyrePostPeak:.24,rollingResistance:.025,aeroDrag:.50,angularDamping:{pitch:.6,yaw:.16,roll:.7},steeringAngle:.53,steeringResponse:6,throttleResponse:8,brakeTorque:1750,handbrakeTorque:2700,differentialSettings:{parasiticTorque:10,centerCoupling:950,rearCoupling:850,centerTurnResistance:110,rearTurnResistance:2200,centerFrontGripFactor:.93,rearFrontGripFactor:.58,rearEnableSpeed:5,rearEnableDifference:9,centerEnableDifference:18,rangeEnableSpeed:1.39,rangeEnableThrottle:.1,rearHighBias:.10,rearLowBias:.025,rearBiasStartSpeed:12,rearBiasFullSpeed:35},bodyContact:{spring:75000,damping:5000,friction:.65},fixedStep:1/180,mapLimit:71};
@@ -55,7 +55,7 @@ export class OffroadVehicle{
   const side=rotate(this.q,[1,0,0]);
   const lateral=this.v[0]*side[0]+this.v[2]*side[2];
   s.driftAngle=Math.atan2(lateral,Math.max(1,Math.abs(speed)));
-  s.rearLocked=true;s.pendingRear=null;s.centerLocked=false;s.pendingCenter=null;s.transferRange='H';s.pendingRange=null;
+  s.frontDriveActive=false;s.rearDriveActive=true;s.rearLocked=true;s.pendingRear=null;s.centerLocked=false;s.pendingCenter=null;s.transferRange='H';s.pendingRange=null;
  }
  const settings=c.differentialSettings;if(s.pendingRange&&s.vehicleSpeed/3.6<settings.rangeEnableSpeed&&Math.abs(command)<settings.rangeEnableThrottle){s.transferRange=s.pendingRange;s.pendingRange=null;s.shiftRemaining=c.shiftDuration;this.cooldown=.6;}
  const average=(start)=>{let sum=0,n=0;for(let i=start;i<start+2;i++)if(!this.wheels[i].detached){sum+=this.wheels[i].omega;n++;}return sum/(n||1);},frontOmega=average(0),rearOmega=average(2);

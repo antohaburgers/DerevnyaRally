@@ -1,4 +1,4 @@
-import {createSideDecalGeometry,liveryAsset} from './livery-system.js?v=032';
+import {createSideDecalGeometry,liveryAsset} from './livery-system.js?v=033';
 // Separate WebGL1 texture pipeline: one transparent image, two body-clipped mesh batches.
 // Meshes are built once, images are rasterized once, and render uses two draw calls.
 export function createLiveryRenderer(gl,compile){
@@ -47,6 +47,14 @@ void main(){
  const panels=[-1,1].map(side=>{const geo=createSideDecalGeometry(side);return{side,count:geo.count,position:makeBuffer(geo.positions),uv:makeBuffer(geo.uv)};});
  const textures=new Map();
  const failed=new Set();
+ const MAX_CACHED_TEXTURES=2; // approximately 2.6 MB of rasterized GPU decals on iPhone
+ function trimTextures(active){
+  while([...textures.values()].filter(Boolean).length>MAX_CACHED_TEXTURES){
+   const old=[...textures.keys()].find(k=>k!==active&&textures.get(k));
+   if(!old)break;
+   gl.deleteTexture(textures.get(old));textures.delete(old);
+  }
+ }
  function loadTexture(key){
   const url=liveryAsset(key);if(!url||textures.has(key)||failed.has(key))return;
   textures.set(key,null);
@@ -65,7 +73,7 @@ void main(){
     gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
-    textures.set(key,t);
+    textures.set(key,t);trimTextures(key);
    }catch(e){textures.delete(key);failed.add(key);console.warn('Не удалось создать ливрею:',key,e);}
   };
   img.onerror=()=>{textures.delete(key);failed.add(key);console.warn('Ливрея не загрузилась:',url);};
@@ -73,6 +81,7 @@ void main(){
  }
  loadTexture('beer');
  function draw(key,mvp,model,environment,eye){
+  loadTexture(key); // lazily decode only selected decals, never all ten at startup
   const texture=textures.get(key);
   if(!texture)return false;
   gl.useProgram(program);gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,texture);

@@ -48,6 +48,9 @@ export function chooseShift(state,c){
   const throttle=clamp(Math.max(state.throttle||0,state.throttleInput||0),0,1);
   const speed=Math.abs(state.vehicleSpeed||0),low=state.transferRange==='L';
   const currentRoadRPM=rpmAtSpeed(speed,g,c,state.transferRange);
+  // Do not shift in the middle of a sustained high-angle drift. Keep 2nd/3rd alive
+  // until the limiter needs another gear; use speed rather than wheelspin.
+  if(state.driftCar&&g>0&&speed>22&&Math.abs(state.driftAngle||0)>.13&&throttle>.28&&state.currentRPM>3500&&state.currentRPM<c.redlineRPM-260)return null;
   const nextRoadRPM=g>1?rpmAtSpeed(speed,g-1,c,state.transferRange):Infinity;
   const nextWheelRPM=g>1?state.currentRPM*c.gearRatios[g-2]/c.gearRatios[g-1]:Infinity;
   const safeDown=g>1&&nextRoadRPM<c.redlineRPM-450&&(state.airborne||nextWheelRPM<c.redlineRPM-250);

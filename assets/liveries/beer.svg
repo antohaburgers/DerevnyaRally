@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1536" height="208" viewBox="0 0 1536 208">
+<title>BEER RALLY — прозрачная ливрея для Нивы</title>
+<desc>Artwork only; windows, wheel openings and panels are clipped by the UV decal geometry.</desc>
+<defs>
+ <linearGradient id="beer" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#b9750d"/><stop offset=".52" stop-color="#ffd457"/><stop offset="1" stop-color="#eaa221"/></linearGradient>
+ <linearGradient id="foam" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fffdf2"/><stop offset="1" stop-color="#eeddb5"/></linearGradient>
+ <pattern id="chips" width="44" height="38" patternUnits="userSpaceOnUse"><circle cx="11" cy="9" r="2" fill="#fff1c1" opacity=".7"/><path d="M24 27h13" stroke="#fff1c1" stroke-width="2" opacity=".5"/></pattern>
+</defs>
+<g stroke-linejoin="round" stroke-linecap="round">
+ <path d="M-35 143L366 7h154L32 209H-25Z" fill="#123325" opacity=".94"/>
+ <path d="M-30 173L402 24h61L17 209H-30Z" fill="#fff0c5"/>
+ <path d="M-29 194L453 32h52L71 209H-29Z" fill="url(#beer)"/>
+ <path d="M1021 0h94l421 141v67h-47L1002 20Z" fill="#123325" opacity=".94"/>
+ <path d="M1110 0h57l368 121v27L1067 6Z" fill="url(#beer)"/>
+ <path d="M1169 0h30l337 109v17L1144 6Z" fill="#fff1cc"/>
+ <path d="M1021 190l216-66 299 84h-128l-179-52-137 52h-70Z" fill="#e5a028"/>
+ <g fill="none" stroke="#f7d58a" stroke-width="4" opacity=".8"><path d="M8 22h151m-94 24h71m149-39h82"/><path d="M1281 39l175 53m-115-9l104 34m-151 37l96 31"/></g>
+ <!-- stylized hop sprig on the rear section -->
+ <g transform="translate(273 114) rotate(-12)" fill="#f4c756" stroke="#123225" stroke-width="5">
+  <path d="M-1 64C-20 16-21-22 0-66" fill="none" stroke="#f8da85" stroke-width="6"/>
+  <path d="M-10-36q-57-33-44-59 54 7 44 59ZM-4-4q-47-23-47-53 49 5 47 53ZM9 32Q-48 7-43-20 5-7 9 32ZM4-26q48-47 52-65-50 8-52 65ZM11 5q55-37 48-60Q12-43 11 5ZM14 34q50-29 52-51Q23-11 14 34Z"/>
+ </g>
+ <!-- sponsor artwork: this aligns with the flat, tall door zone -->
+ <path d="M490 23L1042 10 1006 201H466Z" fill="#173627" stroke="#f8c355" stroke-width="10"/>
+ <path d="M508 39L1019 27 989 186H489Z" fill="url(#chips)" opacity=".62"/>
+ <g font-family="Arial Black,Arial,Helvetica,sans-serif" font-weight="900" font-style="italic" letter-spacing="-3">
+  <text x="505" y="112" font-size="90" fill="#ffedc0" stroke="#173627" stroke-width="7" paint-order="stroke">BEER</text>
+  <text x="518" y="176" font-size="67" fill="#f6b938" stroke="#10291f" stroke-width="8" paint-order="stroke">RALLY</text>
+ </g>
+ <path d="M495 183l216 0-42 14H475Z" fill="#ffe0a2"/>
+ <g transform="translate(855 16)" stroke="#133426">
+  <path d="M1 48h103v125q-52 24-103 0Z" fill="url(#beer)" stroke-width="7"/>
+  <path d="M103 69q65-10 55 47-5 38-55 27" fill="none" stroke="#fbe0a4" stroke-width="19"/>
+  <path d="M103 69q65-10 55 47-5 38-55 27" fill="none" stroke="#173527" stroke-width="5"/>
+  <path d="M21 73v78m27-77v83m27-78v72" stroke="#fff0b7" stroke-width="10" opacity=".72"/>
+  <path d="M-12 54q-16-27 9-38Q8-15 35 4q32-18 51 1 32-11 35 24 22 11 5 29-18 11-30-4-13 14-27 2-23 14-41-1-20 13-40-1Z" fill="url(#foam)" stroke-width="6"/>
+  <circle cx="18" cy="16" r="8" fill="#fff"/><circle cx="68" cy="12" r="11" fill="#fff"/><circle cx="103" cy="42" r="7" fill="#fff"/>
+ </g>
+ <g fill="#ffe7ae" opacity=".95"><path d="M403 25h50l-18 12h-50Z"/><path d="M372 48h48l-18 10h-40Z"/><path d="M1157 148l155-37 22 6-160 45Z"/><path d="M1135 175l165-43 18 6-167 49Z"/></g>
+</g>
+</svg>

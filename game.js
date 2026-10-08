@@ -26,8 +26,9 @@ import {bindThrottle} from './controls.js?v=028';
 import {HoodCamera,CAMERA_CONFIG} from './cameras.js?v=028';
 import {RoadWorld,ROAD_CONFIG,asphaltBlend} from './road-world.js?v=031';
 import {VisualCar} from './visual-car.js?v=028';
-import {PAINTS,STOCK_BUILD,loadBuild,saveBuild,tireSurface,boostLevel} from './garage.js?v=030';
-import {createLiveryRenderer} from './livery-renderer.js?v=032';
+import {PAINTS,STOCK_BUILD,loadBuild,saveBuild,tireSurface,boostLevel} from './garage.js?v=033';
+import {createLiveryRenderer} from './livery-renderer.js?v=033';
+import {LIVERY_CATALOG,liveryAsset} from './livery-system.js?v=033';
 import {OffroadVehicle,CAR_CONFIG,rotate} from './physics.js?v=031';
 import {EngineAudio} from './engine-audio.js?v=030';
 const canvas=document.querySelector('canvas'),gl=canvas.getContext('webgl',{antialias:true,alpha:false});if(!gl){document.querySelector('#error').hidden=false;document.querySelector('#error').textContent='WebGL недоступен. Открой сайт в Safari или Chrome.';throw Error('WebGL unavailable');}
@@ -108,7 +109,7 @@ const exitDialog=document.querySelector('#exit-dialog');
 function openExit(){if(menuOpen||run.ended)return;exitPaused=true;menuSelection=0;clear();music.suspended=true;exitDialog.hidden=false;document.querySelector('#stay-run').focus?.();music.audio?.pause();}
 function closeExit(){exitPaused=false;exitDialog.hidden=true;}
 function stayRun(){closeExit();clear();music.suspended=false;music.unlock();}
-function menuButtons(){if(exitPaused)return [document.querySelector('#stay-run'),document.querySelector('#exit-run')];if(run.ended)return [document.querySelector('#restart-run'),document.querySelector('#back-menu')];if(garageOpen)return [...document.querySelectorAll('#garage-screen [data-tune]'),document.querySelector('#garage-back'),document.querySelector('#garage-start')];return document.querySelector('#cup-choices').hidden?[document.querySelector('#mode-endless'),document.querySelector('#mode-offroad'),document.querySelector('#mode-circuit'),document.querySelector('#refresh-game')]:(document.querySelector('#sprint-choices').hidden?['#cup-ring','#cup-sprint','#cup-back']:['#cup-sprint5','#cup-sprint10','#cup-back']).map(id=>document.querySelector(id));}
+function menuButtons(){if(exitPaused)return [document.querySelector('#stay-run'),document.querySelector('#exit-run')];if(run.ended)return [document.querySelector('#restart-run'),document.querySelector('#back-menu')];if(garageOpen)return [...document.querySelectorAll('#garage-screen [data-tune],#garage-livery-prev,#garage-livery-next'),document.querySelector('#garage-back'),document.querySelector('#garage-start')];return document.querySelector('#cup-choices').hidden?[document.querySelector('#mode-endless'),document.querySelector('#mode-offroad'),document.querySelector('#mode-circuit'),document.querySelector('#refresh-game')]:(document.querySelector('#sprint-choices').hidden?['#cup-ring','#cup-sprint','#cup-back']:['#cup-sprint5','#cup-sprint10','#cup-back']).map(id=>document.querySelector(id));}
 const controllerGasFill=document.querySelector('#controller-gas-fill'),controllerBrakeFill=document.querySelector('#controller-brake-fill');let controllerMode=false;const playerInput={drive:0,steer:0,throttle:0,brake:0,handbrake:false,analog:false};
 function setControllerMode(active){if(controllerMode===active)return;controllerMode=active;clear();document.body.classList?.toggle('controller-mode',active);}
 const gamepad=new GamepadInput(action=>{if(menuOpen||exitPaused||run.ended){const buttons=menuButtons();if(action==='previous'||action==='next'){menuSelection=(menuSelection+(action==='next'?1:-1)+buttons.length)%buttons.length;buttons[menuSelection].focus?.();}else if(action==='confirm')buttons[menuSelection%buttons.length].click();else if(action==='back'){if(exitPaused)stayRun();else if(garageOpen)document.querySelector('#garage-back').click();else if(!document.querySelector('#cup-choices').hidden)document.querySelector('#cup-back').click();}return;}const ids={camera:'#cam',menu:'#menu-button',range:'#range',center:'#center-lock',rear:'#rear-lock'};if(action==='rescue')rescue();else if(ids[action])document.querySelector(ids[action])?.click();},()=>{run.notify('КОНТРОЛЛЕР ПОДКЛЮЧЁН',2);controllerNoticeUntil=Date.now()+2000;document.querySelector('#controller-notice').hidden=false;},setControllerMode);
@@ -189,7 +190,7 @@ function linePart(a,b,width,color){const direction=norm(b.map((v,i)=>v-a[i])),ri
 let body;function part(x,y,z,sx,sy,sz,col){draw(cube,mul(body,matrix(x,y,z,sx,sy,sz)),col);}const facing=new Float32Array([1,0,0,0,0,0,1,0,0,-1,0,0,0,0,0,1]);function roundPart(x,y,z,r,depth,col){draw(cylinder,mul(mul(body,matrix(x,y,z,1,1,1)),mul(facing,matrix(0,0,0,r,depth,r))),col);}
 function vehicle(eye){body=visual.matrix;const paint=PAINTS[garageBuild.color]||green;draw(shell,body,paint);draw(cabin,body,paint);draw(roof,body,paint);draw(bonnet,body,paint);
  // Real transparency and UV, only on visible painted side panels.
- if(garageBuild.livery==='beer'&&bodyLivery.draw('beer',mul(pv,body),body,environment,eye)){
+ if(garageBuild.livery!=='none'&&bodyLivery.draw(garageBuild.livery,mul(pv,body),body,environment,eye)){
   profiler.drawCalls+=2;gl.useProgram(program);boundShape=null;
  }
  for(const panel of glazing)draw(panel.shape,body,panel.color);
@@ -201,7 +202,7 @@ for(const side of [-1,1]){linePart([side*.82,1.699,-1.35],[side*.82,1.699,.12],.
 linePart([-.73,.71,-1.837],[.73,.71,-1.837],.013,dark);for(const side of [-1,1])linePart([side*.73,.72,-1.837],[side*.73,1.12,-1.837],.013,dark);linePart([.03,1.245,rearPlane(1.245,.025)],[.34,1.27,rearPlane(1.27,.025)],.016,dark);part(0,.648,1.989,.40,.083,.014,[.81,.81,.72]);
 for(const side of [-1,1])for(let i=0;i<3;i++)part(side*.803,1.43+i*.039,-1.59,.014,.012,.09,dark);
 // Door outlines and recognisable body crease under the glazing.
-for(const side of [-1,1]){const x=side*(garageBuild.livery==='beer'?.861:.843);part(x,1.10,-.55,.009,.012,2.32,[.30,.38,.34]);part(x,.80,-.44,.009,.53,.012,dark);part(x,.72,.57,.009,.27,.012,dark);part(x,.548,.03,.009,.012,.9,dark);part(x,1.025,-.24,.025,.035,.15,chrome);part(side*.86,1.23,.52,.11,.028,.035,dark);part(side*.925,1.275,.52,.12,.12,.07,dark);}
+for(const side of [-1,1]){const x=side*(garageBuild.livery!=='none'?.861:.843);part(x,1.10,-.55,.009,.012,2.32,[.30,.38,.34]);part(x,.80,-.44,.009,.53,.012,dark);part(x,.72,.57,.009,.27,.012,dark);part(x,.548,.03,.009,.012,.9,dark);part(x,1.025,-.24,.025,.035,.15,chrome);part(side*.86,1.23,.52,.11,.028,.035,dark);part(side*.925,1.275,.52,.12,.12,.07,dark);}
 // Round lamps, rectangular indicators, narrow grille and plain bumpers.
 for(const x of [-.645,.645]){roundPart(x,.93,1.852,.285,.018,dark);lampEmission=environment.headlightIntensity*1.7;roundPart(x,.93,1.873,.237,.023,environment.headlights?[1,.97,.76]:[.88,.87,.70]);roundPart(x-.035,.970,1.889,.065,.01,[.97,.97,.88]);lampEmission=0;part(x,1.112,1.842,.25,.067,.025,dark);part(x,1.115,1.860,.20,.043,.018,[.90,.67,.30]);part(x,.85,-1.833,.17,.27,.025,dark);lampEmission=physics.state.brake>.05?2.7:environment.headlightIntensity*1.6;part(x,.91,-1.849,.135,.13,.018,physics.state.brake>.05?[1,.08,.035]:environment.headlights?[.86,.12,.06]:[.69,.19,.12]);lampEmission=0;part(x,.807,-1.849,.135,.055,.018,[.93,.61,.25]);}
 part(0,.86,1.855,.89,.25,.019,dark);for(let i=0;i<4;i++)part(0,.77+i*.057,1.873,.85,.012,.016,chrome);for(let i=-3;i<=3;i++)part(i*.105,.855,1.877,.014,.22,.012,[.32,.37,.34]);part(0,.87,1.896,.055,.075,.01,chrome);
@@ -212,22 +213,8 @@ for(const z of [-1.90,1.91]){part(0,.64,z,1.83,.10,.13,chrome);for(const x of [-
  if(garageBuild.rack){for(const side of [-1,1]){part(side*.67,1.96,-.63,.07,.12,2.17,dark);for(const z of [-1.38,.12])part(side*.67,1.84,z,.09,.20,.075,dark);}for(const z of [-1.38,-.90,-.41,.12])part(0,1.96,z,1.45,.055,.07,chrome);for(const z of [-1.44,.18])part(0,2.03,z,1.46,.15,.075,dark);}
  if(garageBuild.fogLights)for(const x of [-.48,.48]){const z=garageBuild.frontBumper?2.19:2.08;part(x,.71,z,.40,.08,.11,dark);lampEmission=environment.headlights?2:0;roundPart(x,.77,z+.06,.225,.065,[.98,.78,.19]);lampEmission=0;roundPart(x,.77,z+.09,.165,.015,[1,.89,.41]);}
  if(garageBuild.snorkel){part(.90,1.23,.62,.16,.70,.18,dark);part(.91,1.58,.62,.21,.14,.21,dark);part(.91,1.63,.52,.23,.12,.27,dark);part(.91,1.59,.71,.22,.08,.09,chrome);part(.93,.98,.64,.20,.10,.30,dark);}
- if(garageBuild.livery==='anime')drawGarageLivery('anime');
 part(0,.77,-1.847,.43,.13,.02,dark);part(0,.773,-1.863,.36,.083,.012,[.83,.83,.75]);part(0,1.04,-1.831,.14,.03,.025,chrome);
 // Side-door beer and anime-girl pixel art. Both sides stay attached to the body.
-function drawGarageLivery(livery){
- for(const side of [-1,1]){
-  const at=(y,z,sy,sz,color)=>part(side*.877,y,z,.010,sy,sz,color);
-  if(livery==='anime'){
-   // Face, pink hair, two cat ears, eyes and a scarf.
-   at(.93,-.43,.62,.82,[.94,.61,.79]);at(1.03,-.43,.40,.54,[.99,.85,.76]);
-   for(const z of [-.64,-.24]){at(1.10,z,.10,.08,[.18,.22,.36]);at(1.12,z,.038,.034,[.70,.91,1]);at(.91,z,.05,.11,[.96,.49,.57]);}
-   at(1.23,-.43,.20,.73,[.91,.34,.62]);
-   for(const z of [-.75,-.11]){at(1.23,z,.36,.09,[.84,.30,.56]);at(1.32,z,.18,.08,[.95,.51,.75]);}
-   at(.79,-.43,.055,.13,[.73,.24,.46]);at(.70,-.43,.10,.53,[.90,.41,.68]);
-  }
- }
-}
  // Steel rims with small circular holes; no spinning rectangles outside tyres.
 // Rear beam follows both independent wheel contacts.
 const left=visual.wheels[2].position,right=visual.wheels[3].position,beam=norm(right.map((v,i)=>v-left[i])),beamUp=norm(cross(rotate(visual.q,[0,0,1]),beam)),beamSide=cross(beam,beamUp),mid=left.map((v,i)=>(v+right[i])/2);draw(cube,new Float32Array([...beam.map(v=>v*1.70),0,...beamUp.map(v=>v*.12),0,...beamSide.map(v=>v*.12),0,...mid,1]),dark);
@@ -300,11 +287,30 @@ const garagePanel=document.querySelector('#garage-screen'),garageColors=document
 for(const [id,rgb] of Object.entries(PAINTS)){const button=document.createElement('button');button.type='button';button.dataset.tune='color';button.dataset.value=id;button.title=id.toUpperCase();const chip=document.createElement('span');chip.className='garage-color-dot';chip.style.background='rgb('+rgb.map(v=>Math.round(v*255)).join(',')+')';button.appendChild(chip);garageColors.appendChild(button);}
 function paintGarageUI(){
  for(const button of garagePanel.querySelectorAll('[data-tune]')){const key=button.dataset.tune,value=button.dataset.value,chosen=value?garageBuild[key]===value:!!garageBuild[key];button.classList.toggle('selected',chosen);button.setAttribute('aria-pressed',String(chosen));if(!value)button.textContent=(chosen?'✓ ':'+ ')+button.textContent.replace(/^[✓+] /,'');}
- const preview=document.querySelector('#garage-car'),paint=PAINTS[garageBuild.color]||PAINTS.murena;preview.style.setProperty('--garage-paint','rgb('+paint.map(v=>Math.round(v*255)).join(',')+')');preview.classList.toggle('offroad',garageBuild.tires==='offroad');preview.classList.toggle('wide',garageBuild.arches);preview.classList.toggle('anime',garageBuild.livery==='anime');preview.classList.toggle('beer',garageBuild.livery==='beer');
- const decal=document.querySelector('#garage-decal');decal.hidden=garageBuild.livery==='none'||garageBuild.livery==='beer';decal.textContent=garageBuild.livery==='anime'?'NEKO ♡':'ПИВО 🍺';
+ const preview=document.querySelector('#garage-car'),paint=PAINTS[garageBuild.color]||PAINTS.murena;preview.style.setProperty('--garage-paint','rgb('+paint.map(v=>Math.round(v*255)).join(',')+')');preview.classList.toggle('offroad',garageBuild.tires==='offroad');preview.classList.toggle('wide',garageBuild.arches);preview.classList.toggle('anime',garageBuild.livery==='anime');
+ const selectedIndex=Math.max(0,LIVERY_CATALOG.findIndex(item=>item.id===garageBuild.livery));
+ const selected=LIVERY_CATALOG[selectedIndex],asset=liveryAsset(selected.id);
+ document.querySelector('#garage-livery-name').textContent=selected.name.toUpperCase();
+ document.querySelector('#garage-livery-count').textContent=String(selectedIndex).padStart(2,'0')+' / '+String(LIVERY_CATALOG.length-1).padStart(2,'0');
+ document.querySelector('#garage-livery-description').textContent=selected.tag;
+ const art=document.querySelector('#garage-livery-art');
+ art.hidden=!asset;
+ if(asset&&art.getAttribute('src')!==asset)art.setAttribute('src',asset);
+ if(!asset)art.removeAttribute('src');
+ preview.querySelector('.garage-car-body').style.backgroundImage=asset?'url("'+asset+'")':'none';
+ if(asset)bodyLivery.loadTexture(selected.id);
+ const decal=document.querySelector('#garage-decal');decal.hidden=true;
  document.querySelector('#garage-summary').textContent=(garageBuild.tires==='offroad'?'ВНЕДОРОЖНАЯ РЕЗИНА':'ШОССЕЙНЫЕ ШИНЫ')+' · '+(garageBuild.engine==='turbo'?'ТУРБО':'СТОК');
 }
 garagePanel.addEventListener('click',e=>{const button=e.target.closest('[data-tune]');if(!button)return;const key=button.dataset.tune;if(!(key in STOCK_BUILD))return;garageBuild[key]=button.dataset.value||!garageBuild[key];garageBuild=saveBuild(localStore,garageBuild);paintGarageUI();});
+function cycleLivery(direction){
+ const current=Math.max(0,LIVERY_CATALOG.findIndex(item=>item.id===garageBuild.livery));
+ garageBuild.livery=LIVERY_CATALOG[(current+direction+LIVERY_CATALOG.length)%LIVERY_CATALOG.length].id;
+ garageBuild=saveBuild(localStore,garageBuild);
+ paintGarageUI();
+}
+document.querySelector('#garage-livery-prev').addEventListener('click',()=>cycleLivery(-1));
+document.querySelector('#garage-livery-next').addEventListener('click',()=>cycleLivery(1));
 function showGarage(mode){garageMode=mode;garageOpen=true;menuOpen=true;menuSelection=0;document.querySelector('#main-menu').hidden=true;garagePanel.hidden=false;document.querySelector('#garage-heading').textContent=mode===GAME_MODE.OFFROAD?'НИВА · БЕЗДОРОЖЬЕ':'НИВА · РАЛЛИ';paintGarageUI();}
 document.querySelector('#garage-back').addEventListener('click',()=>{garageOpen=false;garagePanel.hidden=true;showMenu();});
 document.querySelector('#garage-start').addEventListener('click',()=>{garageBuild=saveBuild(localStore,garageBuild);startRun(garageMode);});

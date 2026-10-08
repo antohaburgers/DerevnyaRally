@@ -9,7 +9,7 @@ export const GEARBOX_CONFIG={
   kickdownFromFifthRPM:5100,kickdownOtherRPM:3900,
   loadThreshold:.78,loadDownRPM:2050,loadDownDelay:.9,
   rapidDecelKmhPerSecond:14,rapidDecelMemory:.75,
-  lowUpRPM:[2800,3700],lowDownRPM:1550,
+  lowUpRPM:[2800,3700],lowDownRPM:1550,lowRecoveryRPM:2100,lowShiftRoadFactor:.90,
   shiftDuration:.18,upCooldown:.45,downCooldown:.40,
   lowFadeStart:48,lowFadeEnd:68
 };
@@ -30,12 +30,12 @@ export function updateGearboxIntent(s,c,dt){
   const loaded=throttle>.65&&(s.load||0)>tune.loadThreshold&&(s.longitudinalAcceleration||0)<.25&&s.currentRPM<tune.loadDownRPM;
   s.lugHold=loaded?Math.min(3,(s.lugHold||0)+dt):0;
 }
-function recoveryGear(speed,current,c){
+function recoveryGear(speed,current,c,range='H'){
   if(speed<5)return 1;
   const target=c.gearbox.recoveryTargetRPM;
   let best=current,bestError=Infinity;
   for(let g=1;g<current;g++){
-    const rpm=rpmAtSpeed(speed,g,c,'H');
+    const rpm=rpmAtSpeed(speed,g,c,range);
     if(rpm>Math.min(c.redlineRPM-450,c.gearbox.recoveryMaxRPM))continue;
     const error=Math.abs(rpm-target)+Math.max(0,rpm-3000)*2;
     if(error<bestError){best=g;bestError=error;}
@@ -53,8 +53,14 @@ export function chooseShift(state,c){
   const safeDown=g>1&&nextRoadRPM<c.redlineRPM-450&&(state.airborne||nextWheelRPM<c.redlineRPM-250);
   if(low){
     const lowUp=tune.lowUpRPM[0]+(tune.lowUpRPM[1]-tune.lowUpRPM[0])*throttle;
+    // In LOW range, spinning wheels must not force the auto box into 4th or 5th at walking speed.
+    if(g>1&&throttle>.42&&currentRoadRPM<tune.lowRecoveryRPM){
+      const target=recoveryGear(speed,g,c,'L');
+      if(target<g)return{gear:target,event:'RECOVERY'};
+    }
     if(safeDown&&state.currentRPM<tune.lowDownRPM+((state.load||0)>.75?300:0))return{gear:g-1,event:'DOWNSHIFT'};
-    if(g<5&&speed>3&&state.currentRPM>=lowUp&&(state.load||0)<.95)return{gear:g+1,event:'UPSHIFT'};
+    // Use actual road-speed RPM for upshifts, not wildly spinning tire RPM.
+    if(g<5&&speed>3&&!state.airborne&&currentRoadRPM>=lowUp*tune.lowShiftRoadFactor&&state.currentRPM>=lowUp&&(state.load||0)<.95)return{gear:g+1,event:'UPSHIFT'};
     return null;
   }
   const isUrgent=(state.rapidDecelHold||0)>0||(state.brake||0)>.35;

@@ -1,3 +1,4 @@
+import {LIVERY_ASSETS} from './livery-system.js?v=033';
 // Persistent cosmetic and performance loadout. Wheel radius is intentionally unchanged.
 export const GARAGE_KEY='niva3d.garageBuild.v1';
 export const PAINTS={murena:[.20,.32,.30],white:[.86,.87,.80],black:[.12,.15,.16],blue:[.15,.33,.63],red:[.70,.17,.15],silver:[.59,.63,.64],sand:[.67,.59,.43],yellow:[.85,.63,.18]};
@@ -8,7 +9,7 @@ export function normalizeBuild(value){
  if(v.tires==='offroad')b.tires='offroad';
  if(v.engine==='turbo')b.engine='turbo';
  if(Object.prototype.hasOwnProperty.call(PAINTS,v.color))b.color=v.color;
- if(['none','beer','anime'].includes(v.livery))b.livery=v.livery;
+ if(v.livery==='none'||Object.prototype.hasOwnProperty.call(LIVERY_ASSETS,v.livery))b.livery=v.livery;
  for(const key of booleanKeys)b[key]=v[key]===true;
  return b;
 }

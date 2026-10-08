@@ -164,12 +164,16 @@ const rearGlass=[[-.665,1.235],[.665,1.235],[.665,1.555],[.614,1.615],[-.614,1.6
 panel(rearOutline.map(([x,y])=>[x,y,rearPlane(y,.009)]),dark);
 panel(rearGlass.map(([x,y])=>[x,y,rearPlane(y,.014)]),glass);
 const archDetails=[];for(const side of [-1,1])for(const centre of [-1.1,1.1])for(let i=0;i<18;i++){const a=.18+i*(Math.PI-.36)/18,b=.18+(i+1)*(Math.PI-.36)/18;const points=[];for(const [angle,radius] of [[a,.512],[b,.512],[b,.555],[a,.555]])points.push([side*.846,.44+Math.sin(angle)*radius,centre+Math.cos(angle)*radius]);archDetails.push(polygonMesh(points));}
+const wideArchDetails=[];for(const side of [-1,1])for(const centre of [-1.1,1.1])for(let i=0;i<9;i++){
+ const a=.20+i*(Math.PI-.40)/9,b=.20+(i+1)*(Math.PI-.40)/9;
+ wideArchDetails.push(polygonMesh([[a,.515],[b,.515],[b,.635],[a,.635]].map(([angle,r])=>[side*.895,.44+Math.sin(angle)*r,centre+Math.cos(angle)*r])));
+}
 function linePart(a,b,width,color){const direction=norm(b.map((v,i)=>v-a[i])),right=norm(cross(direction,Math.abs(direction[1])>.9?[1,0,0]:[0,1,0])),up=cross(direction,right),length=Math.hypot(...b.map((v,i)=>v-a[i])),mid=a.map((v,i)=>(v+b[i])/2);const m=new Float32Array([...right.map(v=>v*width),0,...up.map(v=>v*width),0,...direction.map(v=>v*length),0,...mid,1]);draw(cube,mul(body,m),color);}
 let body;function part(x,y,z,sx,sy,sz,col){draw(cube,mul(body,matrix(x,y,z,sx,sy,sz)),col);}const facing=new Float32Array([1,0,0,0,0,0,1,0,0,-1,0,0,0,0,0,1]);function roundPart(x,y,z,r,depth,col){draw(cylinder,mul(mul(body,matrix(x,y,z,1,1,1)),mul(facing,matrix(0,0,0,r,depth,r))),col);}
-function vehicle(){body=visual.matrix;draw(shell,body,green);draw(cabin,body,green);draw(roof,body,green);draw(bonnet,body,green);for(const panel of glazing)draw(panel.shape,body,panel.color);
+function vehicle(){body=visual.matrix;const paint=PAINTS[garageBuild.color]||green;draw(shell,body,paint);draw(cabin,body,paint);draw(roof,body,paint);draw(bonnet,body,paint);for(const panel of glazing)draw(panel.shape,body,panel.color);
 part(0,.49,0,1.32,.12,2.6,dark);
 // Thin arch mouldings, roof gutters, bonnet stampings and wipers.
-for(const arch of archDetails)draw(arch,body,[.23,.32,.28]);
+for(const arch of archDetails)draw(arch,body,[.23,.32,.28]);if(garageBuild.arches)for(const arch of wideArchDetails)draw(arch,body,[.050,.057,.049]);
 for(const side of [-1,1]){linePart([side*.82,1.699,-1.35],[side*.82,1.699,.12],.018,chrome);linePart([side*.66,bonnetTop(side*.66,.81)+.004,.81],[side*.66,bonnetTop(side*.66,1.68)+.004,1.68],.012,[.29,.38,.33]);linePart([side*.44,1.276,frontPlane(1.276,.027)],[side*.16,1.301,frontPlane(1.301,.027)],.014,dark);linePart([side*.838,1.14,.74],[side*.838,1.12,1.72],.01,dark);part(side*.845,1.08,.96,.009,.055,.14,[.76,.47,.16]);}
 // Tailgate perimeter, rear wiper, vents and small licence plates.
 linePart([-.73,.71,-1.837],[.73,.71,-1.837],.013,dark);for(const side of [-1,1])linePart([side*.73,.72,-1.837],[side*.73,1.12,-1.837],.013,dark);linePart([.03,1.245,rearPlane(1.245,.025)],[.34,1.27,rearPlane(1.27,.025)],.016,dark);part(0,.648,1.989,.40,.083,.014,[.81,.81,.72]);
@@ -180,11 +184,41 @@ for(const side of [-1,1]){const x=side*.843;part(x,1.10,-.55,.009,.012,2.32,[.30
 for(const x of [-.645,.645]){roundPart(x,.93,1.852,.285,.018,dark);lampEmission=environment.headlightIntensity*1.7;roundPart(x,.93,1.873,.237,.023,environment.headlights?[1,.97,.76]:[.88,.87,.70]);roundPart(x-.035,.970,1.889,.065,.01,[.97,.97,.88]);lampEmission=0;part(x,1.112,1.842,.25,.067,.025,dark);part(x,1.115,1.860,.20,.043,.018,[.90,.67,.30]);part(x,.85,-1.833,.17,.27,.025,dark);lampEmission=physics.state.brake>.05?2.7:environment.headlightIntensity*1.6;part(x,.91,-1.849,.135,.13,.018,physics.state.brake>.05?[1,.08,.035]:environment.headlights?[.86,.12,.06]:[.69,.19,.12]);lampEmission=0;part(x,.807,-1.849,.135,.055,.018,[.93,.61,.25]);}
 part(0,.86,1.855,.89,.25,.019,dark);for(let i=0;i<4;i++)part(0,.77+i*.057,1.873,.85,.012,.016,chrome);for(let i=-3;i<=3;i++)part(i*.105,.855,1.877,.014,.22,.012,[.32,.37,.34]);part(0,.87,1.896,.055,.075,.01,chrome);
 for(const z of [-1.90,1.91]){part(0,.64,z,1.83,.10,.13,chrome);for(const x of [-.61,.61])part(x,.64,z+(z>0?.077:-.077),.11,.16,.025,dark);}
+ // Each expedition accessory is independently installed and has a separate visual mesh.
+ if(garageBuild.frontBumper){part(0,.62,2.045,1.97,.19,.19,dark);part(0,.75,1.99,.62,.23,.18,[.20,.23,.21]);for(const side of [-1,1]){part(side*.81,.71,2.01,.14,.33,.19,dark);part(side*.56,.53,2.13,.08,.1,.14,chrome);}}
+ if(garageBuild.rearBumper){part(0,.62,-2.02,1.94,.19,.17,dark);for(const side of [-1,1])part(side*.81,.72,-2.0,.14,.31,.16,dark);}
+ if(garageBuild.rack){for(const side of [-1,1]){part(side*.67,1.96,-.63,.07,.12,2.17,dark);for(const z of [-1.38,.12])part(side*.67,1.84,z,.09,.20,.075,dark);}for(const z of [-1.38,-.90,-.41,.12])part(0,1.96,z,1.45,.055,.07,chrome);for(const z of [-1.44,.18])part(0,2.03,z,1.46,.15,.075,dark);}
+ if(garageBuild.fogLights)for(const x of [-.48,.48]){const z=garageBuild.frontBumper?2.19:2.08;part(x,.71,z,.40,.08,.11,dark);lampEmission=environment.headlights?2:0;roundPart(x,.77,z+.06,.225,.065,[.98,.78,.19]);lampEmission=0;roundPart(x,.77,z+.09,.165,.015,[1,.89,.41]);}
+ if(garageBuild.snorkel){part(.90,1.23,.62,.16,.70,.18,dark);part(.91,1.58,.62,.21,.14,.21,dark);part(.91,1.63,.52,.23,.12,.27,dark);part(.91,1.59,.71,.22,.08,.09,chrome);part(.93,.98,.64,.20,.10,.30,dark);}
+ if(garageBuild.livery!=='none')drawGarageLivery(garageBuild.livery);
 part(0,.77,-1.847,.43,.13,.02,dark);part(0,.773,-1.863,.36,.083,.012,[.83,.83,.75]);part(0,1.04,-1.831,.14,.03,.025,chrome);
-// Steel rims with small circular holes; no spinning rectangles outside tyres.
+// Side-door beer and anime-girl pixel art. Both sides stay attached to the body.
+function drawGarageLivery(livery){
+ for(const side of [-1,1]){
+  const at=(y,z,sy,sz,color)=>part(side*.877,y,z,.010,sy,sz,color);
+  if(livery==='beer'){
+   at(.94,-.42,.61,.74,[.89,.70,.24]);at(.92,-.42,.49,.61,[.22,.39,.29]);
+   at(.96,-.42,.35,.33,[.94,.76,.24]);at(1.02,-.42,.06,.30,[.97,.94,.81]);
+   for(const z of [-.61,-.43,-.25])at(1.12,z,.085,.13,[.97,.95,.85]);
+   at(.74,-.42,.08,.71,[.90,.65,.20]);
+  }else if(livery==='anime'){
+   // Face, pink hair, two cat ears, eyes and a scarf.
+   at(.93,-.43,.62,.82,[.94,.61,.79]);at(1.03,-.43,.40,.54,[.99,.85,.76]);
+   for(const z of [-.64,-.24]){at(1.10,z,.10,.08,[.18,.22,.36]);at(1.12,z,.038,.034,[.70,.91,1]);at(.91,z,.05,.11,[.96,.49,.57]);}
+   at(1.23,-.43,.20,.73,[.91,.34,.62]);
+   for(const z of [-.75,-.11]){at(1.23,z,.36,.09,[.84,.30,.56]);at(1.32,z,.18,.08,[.95,.51,.75]);}
+   at(.79,-.43,.055,.13,[.73,.24,.46]);at(.70,-.43,.10,.53,[.90,.41,.68]);
+  }
+ }
+}
+ // Steel rims with small circular holes; no spinning rectangles outside tyres.
 // Rear beam follows both independent wheel contacts.
 const left=visual.wheels[2].position,right=visual.wheels[3].position,beam=norm(right.map((v,i)=>v-left[i])),beamUp=norm(cross(rotate(visual.q,[0,0,1]),beam)),beamSide=cross(beam,beamUp),mid=left.map((v,i)=>(v+right[i])/2);draw(cube,new Float32Array([...beam.map(v=>v*1.70),0,...beamUp.map(v=>v*.12),0,...beamSide.map(v=>v*.12),0,...mid,1]),dark);
-for(const w of visual.wheels){if(w.detached)continue;const up=rotate(visual.q,[0,1,0]),localForward=rotate(visual.q,[Math.sin(w.steer),0,Math.cos(w.steer)]),axis=w.front?norm(cross(up,localForward)):beam,wheelUp=norm(cross(localForward,axis));let m=new Float32Array([...axis,0,...wheelUp,0,...localForward,0,...w.position.map((v,i)=>v-(i===1?w.visualSink||0:0)),1]);m=mul(m,rotateX(w.angle));const axle=(diameter,width)=>new Float32Array([0,diameter,0,0,-width,0,0,0,0,0,diameter,0,0,0,0,1]);draw(cylinder,mul(m,axle(CAR_CONFIG.wheelRadius*2,.25)),rubber);draw(cylinder,mul(m,axle(.53,.259)),chrome);draw(cylinder,mul(m,axle(.17,.275)),[.40,.44,.41]);for(let i=0;i<6;i++){const a=i*Math.PI/3,local=matrix(Math.sign(w.x)*.134,Math.cos(a)*.18,Math.sin(a)*.18,1,1,1);draw(cylinder,mul(m,mul(local,axle(.075,.008))),dark);}}}
+for(const w of visual.wheels){if(w.detached)continue;const up=rotate(visual.q,[0,1,0]),localForward=rotate(visual.q,[Math.sin(w.steer),0,Math.cos(w.steer)]),axis=w.front?norm(cross(up,localForward)):beam,wheelUp=norm(cross(localForward,axis));let m=new Float32Array([...axis,0,...wheelUp,0,...localForward,0,...w.position.map((v,i)=>v-(i===1?w.visualSink||0:0)),1]);m=mul(m,rotateX(w.angle));const axle=(diameter,width)=>new Float32Array([0,diameter,0,0,-width,0,0,0,0,0,diameter,0,0,0,0,1]);draw(cylinder,mul(m,axle(CAR_CONFIG.wheelRadius*2,.25)),rubber);
+ if(garageBuild.tires==='offroad')for(let i=0;i<8;i++){const a=i*Math.PI/4;draw(cube,mul(m,mul(rotateX(a),matrix(0,CAR_CONFIG.wheelRadius-.018,0,.30,.065,.16))),[.060,.077,.064]);}
+ draw(cylinder,mul(m,axle(garageBuild.tires==='offroad'?.54:.53,.259)),garageBuild.tires==='offroad'?[.24,.28,.26]:chrome);
+ draw(cylinder,mul(m,axle(.17,.275)),garageBuild.tires==='offroad'?[.68,.69,.62]:[.40,.44,.41]);
+ for(let i=0;i<6;i++){const a=i*Math.PI/3,local=matrix(Math.sign(w.x)*.134,Math.cos(a)*.18,Math.sin(a)*.18,1,1,1);draw(cylinder,mul(m,mul(local,axle(.075,.008))),dark);}}}
 const npcMeshes={};for(const type of ['NIVA','KOPEIKA','TRACTOR']){const raw=npcGeometry(type,{shell,cabin,roof,bonnet,glazing});npcMeshes[type]=Object.fromEntries(Object.entries(raw).map(([key,data])=>[key,mesh(data.v,data.n)]));}
 const raceRaw=npcGeometry('NIVA',{shell,cabin,roof,bonnet,glazing},true),raceMeshes=Object.fromEntries(Object.entries(raceRaw).map(([key,data])=>[key,mesh(data.v,data.n)]));
 const raceLODMeshes=[raceMeshes,...[1,2].map(lod=>Object.fromEntries(Object.entries(npcGeometry('NIVA',null,true,lod)).map(([key,data])=>[key,mesh(data.v,data.n)])))],aiWheelAxle=new Float32Array([0,.88,0,0,-.25,0,0,0,0,0,.88,0,0,0,0,1]);

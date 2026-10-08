@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1536" height="208" viewBox="0 0 1536 208"><title>MUD MONSTER — body-only game decal</title><desc>Transparent artwork for existing safe-body UV mesh. No full car, no wheels or windows.</desc><defs>
+ <linearGradient id="accent" x1="0" y1="0" x2="1" y2=".25"><stop stop-color="#df7e2f"/><stop offset="1" stop-color="#f3d39a"/></linearGradient>
+ <linearGradient id="panel" x1="0" y1="0" x2="1" y2=".3"><stop stop-color="#221b15" stop-opacity=".98"/><stop offset="1" stop-color="#221b15" stop-opacity=".84"/></linearGradient>
+ <pattern id="micro" width="35" height="28" patternUnits="userSpaceOnUse"><path d="M4 8h17M13 21h10" stroke="#f3d39a" stroke-width="1.1" opacity=".2"/></pattern>
+ </defs>
+ <g stroke-linejoin="round" stroke-linecap="round">
+ <path d="M-28 161L416 3h100L65 208H-24Z" fill="#221b15" opacity=".91"/>
+ <path d="M-20 185L466 7h38L40 208H-20Z" fill="url(#accent)"/>
+ <path d="M3 193L497 17h26L85 208H14Z" fill="#f3d39a" opacity=".80"/>
+ <path d="M1037 0h87l436 149v60h-60L1021 17Z" fill="#221b15" opacity=".91"/>
+ <path d="M1100 0h57l381 130v30L1064 7Z" fill="url(#accent)"/>
+ <path d="M1148 0h22l368 125v10L1119 8Z" fill="#f3d39a" opacity=".9"/>
+ <path d="M9 21h226m-178 20h117M1319 181h170m-97-18h110" stroke="#df7e2f" stroke-width="3" fill="none" opacity=".75"/>
+ <path d="M473 17L1043 13 1004 196H481Z" fill="url(#panel)" stroke="#df7e2f" stroke-width="7"/>
+ <path d="M487 28L1029 25 991 183H493Z" fill="url(#micro)"/>
+ <path d="M493 194h175l-23 9H478Z" fill="#df7e2f"/>
+ <g font-family="Arial,Helvetica,sans-serif" font-weight="900">
+ <text x="26" y="39" font-size="26" font-style="italic" fill="#df7e2f" letter-spacing="3">04</text>
+ <text x="1145" y="185" font-size="29" font-style="italic" fill="#f3d39a" letter-spacing="2">DEEP</text></g><g font-family="Arial Black,Arial,Helvetica,sans-serif" font-weight="900" font-style="italic" letter-spacing="-1"><text x="510" y="105" font-size="76" fill="#f3d39a" stroke="#221b15" stroke-width="5" paint-order="stroke">MUD</text><text x="515" y="151" font-size="30" fill="#df7e2f" letter-spacing="1.5">MONSTER</text></g>
+ <g transform="translate(883 112)">
+ <path d="M-112 73l21-48-45-52 73 6 42-72 32 45 63-46 0 65 59 23-40 51 16 36Z" fill="#df7e2f" stroke="#221b15" stroke-width="9"/>
+ <path d="M-83-35l56 17 11 27-52-10m100-20 52-16-14 34-50 17" fill="#221b15"/>
+ <path d="M-72 43l42 11 17 24 17-25 17 24 22-29 39-11-35 71h-106Z" fill="#f3d39a" stroke="#221b15" stroke-width="6"/>
+ <path d="M-75-25l30 10m70 1 31-14" stroke="#f3d39a" stroke-width="7"/>
+ </g>
+ <g fill="#df7e2f" opacity=".88"><circle cx="399" cy="165" r="20"/><circle cx="426" cy="184" r="13"/><circle cx="1098" cy="59" r="13"/><circle cx="1140" cy="43" r="25"/><path d="M57 100l69-48-29 45 40-15-73 65Zm1286 45l90-38-35 42 48-10-80 40Z"/></g></g></svg>

@@ -7,12 +7,22 @@ export class EngineAudio{
  this.driftBuzzFilter=a.createBiquadFilter();this.driftBuzzFilter.type='bandpass';this.driftBuzzFilter.frequency.value=1400;this.driftBuzzFilter.Q.value=.75;
  this.driftBuzzGain=a.createGain();this.driftBuzzGain.gain.value=0;
  this.driftBuzz.connect(this.driftBuzzFilter).connect(this.driftBuzzGain).connect(this.master);this.driftBuzz.start();
+ // A narrow, quiet rear-tyre squeal follows sustained angle and road speed.
+ this.driftSkid=a.createOscillator();this.driftSkid.type='triangle';this.driftSkid.frequency.value=710;
+ this.driftSkidGain=a.createGain();this.driftSkidGain.gain.value=0;
+ this.driftSkid.connect(this.driftSkidGain).connect(this.master);this.driftSkid.start();
  this.started=true;await a.resume();this.button.textContent=this.enabled?'ЗВУК ON':'ЗВУК OFF';this.button.setAttribute('aria-pressed',String(this.enabled));}catch{this.button.textContent='ЗВУК ON';}}
  async toggle(){if(!this.started){await this.start();return;}this.enabled=!this.enabled;if(this.enabled)await this.ctx.resume().catch(()=>{});this.master.gain.setTargetAtTime(this.enabled?.12:0,this.ctx.currentTime,.09);this.button.textContent=this.enabled?'ЗВУК ON':'ЗВУК OFF';this.button.setAttribute('aria-pressed',String(this.enabled));}
  update(state,wheels=[]){if(!this.started||this.ctx.state!=='running')return;const now=this.ctx.currentTime,running=state.engineRunning!==false,rpm=state.currentRPM;const drift=!!state.driftCar;
  this.pulse.frequency.setTargetAtTime(rpm/(drift?25:30),now,drift?.025:.055);
  this.crank.frequency.setTargetAtTime(rpm/(drift?38:60)*.99,now,drift?.04:.07);
  this.filter.frequency.setTargetAtTime(drift?1050+rpm*.23+state.throttle*1050:380+rpm*.16+state.throttle*650,now,.065);
+ if(this.driftSkid){
+  const slide=Math.min(1,Math.max(0,(Math.abs(state.driftAngle||0)-.13)*1.8));
+  const moving=Math.min(1,Math.max(0,((state.vehicleSpeed||0)-18)/45));
+  this.driftSkid.frequency.setTargetAtTime(710+Math.min(180,(state.vehicleSpeed||0)*1.7)+slide*220,now,.08);
+  this.driftSkidGain.gain.setTargetAtTime(this.enabled&&running&&drift?slide*moving*.028:0,now,.07);
+ }
  if(this.driftBuzz){
   this.driftBuzz.frequency.setTargetAtTime(rpm/19,now,.035);
   this.driftBuzzFilter.frequency.setTargetAtTime(700+rpm*.22,now,.05);

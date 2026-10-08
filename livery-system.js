@@ -22,7 +22,7 @@ export function createSideDecalGeometry(side){
  const p=[],uv=[],d=BODY_DECAL;
  const emit=(z,y)=>{
   p.push(side*(d.halfWidth+d.offset),y,z);
-  uv.push(clamp(side===1?(d.maxZ-z)/(d.maxZ-d.minZ):(z-d.minZ)/(d.maxZ-d.minZ),0,1),clamp((y-d.bottom)/(d.top-d.bottom),0,1));
+  uv.push(clamp(side===1?(d.maxZ-z)/(d.maxZ-d.minZ):(z-d.minZ)/(d.maxZ-d.minZ),0,1),clamp((d.top-y)/(d.top-d.bottom),0,1));
  };
  const tri=(a,b,c)=>{emit(...a);emit(...b);emit(...c);};
  for(const [a,b] of d.panels){

@@ -50,7 +50,7 @@ export function rockyRoadHeight(section,u,lateral){
  const fade=smooth((u-.095)/.105)*smooth((.915-u)/.105);
  const a=Math.sin(d*.82+lateral*2.05+p),b=Math.sin(d*1.43-lateral*1.58+p*1.7);
  const c=Math.cos(d*.45+lateral*2.7-p*.63),crown=Math.max(0,Math.sin(d*.58+lateral*.55+p*.37));
- return fade*field.amplitude*(.47*a+.30*b+.17*c+.29*crown);
+ const edge=smooth((section.width*.5+3.3-Math.abs(lateral))/2.3);return fade*edge*field.amplitude*(.47*a+.30*b+.17*c+.29*crown);
 }
 
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x)),smooth=x=>{x=clamp(x,0,1);return x*x*(3-2*x);};
@@ -100,16 +100,15 @@ export class RoadWorld{
    }
   }
   if(type==='CROSS_AXLE'){
-   for(const [u,side] of [[.35,1],[.67,-1]]){
-    const delta=2.24/length,peak=.28+.09*challenge+this.random()*.045;
-    add('CROSS_AXLE',u,side*.86,{height:peak,radius:.88,longRadius:1.65,surfaceType:'ROCK'});
-    add('CROSS_AXLE',u+delta,-side*.86,{height:-peak*.70,radius:.85,longRadius:1.55,surfaceType:'SOFT_DIRT'});
+   // Raised wheel and diagonally opposite wheel sunk in mud, offset by wheelbase.
+   for(const [u,side] of [[.27,1],[.52,-1],[.77,1]]){
+    const wheelbase=2.24/length,peak=.43+.14*challenge+this.random()*.07;
+    add('CROSS_AXLE',u,side*.87,{height:peak,radius:1.05,longRadius:2.35,surfaceType:'ROCK'});
+    add('DIAGONAL_GULLY',u+wheelbase,-side*.72,{
+     height:-peak*(.92+this.random()*.12),radius:2.55,longRadius:2.0,skew:side*1.04,mudDepth:.80+.12*challenge
+    });
+    add('MUD_MEDIUM',u+.5*wheelbase,-side*.82,{radius:1.12,longRadius:2.6,mudDepth:.78,height:-.055});
    }
-  }
-  if(type==='ROCK_STEPS'){
-   for(const [u,side] of [[.35,-1],[.67,1]])add('ROCK_STEP',u,side*.46,{
-    height:.24+.10*challenge+this.random()*.045,radius:1.62+.13*this.random(),longRadius:1.65,shape:'ledge'
-   });
   }
   if(type==='SIDE_SLOPE'){
    add('SIDE_BANK',.5,0,{shape:'bank',height:sign*(.52+.20*challenge+this.random()*.06),radius:section.width/2+1.1,startU:.16,endU:.85});
@@ -117,17 +116,30 @@ export class RoadWorld{
     radius:.44,longRadius:1,height:-.09-.045*challenge,pathWander:.12,pathPhase:this.random()*6.28});
   }
   if(type==='RUT_MAZE'){
+   // Shifting mud ruts deeper than before, with raised lips and angled washouts.
    for(const [startU,endU,shift] of [[.10,.39,-.62],[.37,.68,.72],[.66,.91,-.45]]){
-    const track={shape:'long_rut',startU,endU,pathShift:shift,pathWander:.18+this.random()*.13,pathPhase:this.random()*6.28,longRadius:1};
-    for(const side of [-1,1])add('MUD_STRIP',.5,side*.88,{...track,radius:.43+.06*this.random(),
-     mudDepth:.55+.21*challenge,height:-.22-.10*challenge});
+    const track={shape:'long_rut',startU,endU,pathShift:shift,pathWander:.22+this.random()*.17,pathPhase:this.random()*6.28,longRadius:1};
+    for(const side of [-1,1])add('MUD_STRIP',.5,side*.88,{...track,radius:.50+.06*this.random(),
+     mudDepth:.70+.22*challenge,height:-.35-.15*challenge});
    }
-   for(const u of [.39,.71])add('SOFT_PATCH',u,0,{radius:1.35,longRadius:3.2});
+   for(const [u,side] of [[.40,1],[.69,-1]]){
+    add('DIAGONAL_GULLY',u,0,{height:-.33-.17*challenge,radius:3.35,longRadius:2.35,skew:side*1.20,mudDepth:.84});
+    add('GULLY_LIP',u-.027,side*.72,{height:.19+.09*challenge,radius:2.2,longRadius:1.55,skew:side*1.20});
+   }
   }
   if(type==='EROSION_GULLY'){
-   for(const [u,side] of [[.30,-1],[.52,1],[.74,-1]])add('GULLY',u,side*.38,{
-    shape:'gully',height:-.25-.11*challenge-this.random()*.04,radius:2.22,longRadius:2.4,surfaceType:'SOFT_DIRT'
-   });
+   // Real diagonal trenches with soft mud beds and opposed high erosion lips.
+   for(const [u,side] of [[.28,1],[.52,-1],[.76,1]]){
+    const depth=.59+.23*challenge+this.random()*.085,skew=side*(1.15+this.random()*.4);
+    add('DIAGONAL_GULLY',u,0,{
+     height:-depth,radius:section.width/2+.8,longRadius:2.55+this.random()*.45,skew,
+     mudDepth:.82+.15*challenge
+    });
+    add('GULLY_LIP',u-.048,side*.75,{
+     height:.28+.12*challenge+this.random()*.055,radius:3.05,longRadius:1.5,skew
+    });
+    add('MUD_MEDIUM',u+.025,-side*.85,{radius:1.42,longRadius:2.55,mudDepth:.86,height:-.085});
+   }
   }
   if(type==='DEEP_MUD')for(const u of [.24,.38,.54,.70,.82])add('MUD_MEDIUM',u,this.random()-.5,{radius:2.0,longRadius:6.0,mudDepth:.8+this.random()*.15,height:-.10});
   if(type==='RUT_GAUNTLET'||type==='MUD_CLIMB'&&this.random()<.58){

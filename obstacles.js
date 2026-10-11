@@ -3,6 +3,9 @@ export const OBSTACLE_CONFIG={chance:1,minimumStart:14,clearLanding:36,localSpac
  ROCK_STEP:{height:.32,radius:2.15,longRadius:1.8,shape:'ledge',surfaceType:'ROCK'},
  SIDE_BANK:{height:.62,radius:3.8,longRadius:1,shape:'bank'},
  GULLY:{height:-.32,radius:2.15,longRadius:2.6,shape:'gully',surfaceType:'SOFT_DIRT'},
+ DIAGONAL_GULLY:{height:-.52,radius:4.2,longRadius:2.7,shape:'diagonal_gully',surfaceType:'MUD',mudDepth:.88},
+ GULLY_LIP:{height:.24,radius:3.2,longRadius:1.4,shape:'diagonal_gully',surfaceType:'SOFT_DIRT'},
+ ROCK_CRAWL_BOULDER:{height:.46,radius:1.05,longRadius:1.30,surfaceType:'ROCK'},
  MUD_PATCH:{height:-.07,radius:.55,longRadius:2.0,surfaceType:'MUD',mudDepth:.60},
  MUD_MEDIUM:{height:-.08,radius:1.25,longRadius:3.0,surfaceType:'MUD',mudDepth:.52},
  MUD_STRIP:{height:-.09,radius:.65,longRadius:4.2,surfaceType:'MUD',mudDepth:.65},
@@ -29,6 +32,13 @@ export function obstacleWeight(o,u,lateral,length){
   const smooth=t=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t);};
   return smooth((o.longRadius+.85-Math.abs((u-o.u)*length))/.85)*
          smooth((o.radius+.6-Math.abs(lateral-o.lateral))/.6);
+ }
+ if(o.shape==='diagonal_gully'){
+  // A real angled ditch: front/rear, left/right encounter different road heights.
+  const smooth=t=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t);};
+  const along=(u-o.u)*length-(lateral-o.lateral)*(o.skew||1);
+  const across=smooth((o.radius+.70-Math.abs(lateral-o.lateral))/1.05);
+  return Math.exp(-.75*(along/(o.longRadius||2.5))**2)*across;
  }
  if(o.shape==='gully'){
   const smooth=t=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t);};

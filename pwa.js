@@ -1,6 +1,6 @@
 // Updates never touch localStorage, IndexedDB or player records.
 // Relative URLs preserve installation at /DerevnyaRally/ on GitHub Pages.
-const APP_VERSION='0.36';
+const APP_VERSION='0.37';
 const updateButton=document.querySelector('#refresh-game');
 const updateStatus=document.querySelector('#update-status');
 const appScope=new URL('./',location.href).href;
@@ -25,7 +25,7 @@ async function refreshGame(){
   const response=await fetch(freshUrl.href,{cache:'no-store'});
   if(!response.ok)throw new Error('СЕРВЕР НЕДОСТУПЕН · '+response.status);
   const page=await response.text();
-  if(!page.includes('id="refresh-game"')||!page.includes('id="mode-offroad"')||!page.includes('id="mode-asphalt"'))throw new Error('НОВАЯ ВЕРСИЯ ЕЩЁ НЕ ОПУБЛИКОВАНА');
+  if(!page.includes('id="refresh-game"')||!page.includes('id="mode-offroad"')||!page.includes('id="mode-circuit"'))throw new Error('НОВАЯ ВЕРСИЯ ЕЩЁ НЕ ОПУБЛИКОВАНА');
   setUpdateStatus('ОБНОВЛЯЮ ФАЙЛЫ…');
   if('serviceWorker' in navigator){
    const registrations=await navigator.serviceWorker.getRegistrations();

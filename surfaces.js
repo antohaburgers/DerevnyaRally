@@ -5,6 +5,7 @@ export const SURFACE_CONFIG={
  DIRT:{longitudinalGrip:.90,lateralGrip:.90,rollingResistance:.025,slipResistance:1,sinkAmount:0,effectMultiplier:1,vibrationMultiplier:.12},
  SOFT_DIRT:{longitudinalGrip:.60,lateralGrip:.55,rollingResistance:.065,slipResistance:1.35,sinkAmount:.018,effectMultiplier:1.2,vibrationMultiplier:.2},
  MUD:{longitudinalGrip:.52,lateralGrip:.40,rollingResistance:.065,slipResistance:2.2,sinkAmount:.07,effectMultiplier:1.5,vibrationMultiplier:.08},
+ PEAT:{longitudinalGrip:.54,lateralGrip:.43,rollingResistance:.085,slipResistance:2.35,sinkAmount:.065,effectMultiplier:1.48,vibrationMultiplier:.055},
  ROCK:{longitudinalGrip:1.12,lateralGrip:1.15,rollingResistance:.025,slipResistance:1,sinkAmount:0,effectMultiplier:.3,vibrationMultiplier:.8},
  WATER:{longitudinalGrip:.68,lateralGrip:.60,rollingResistance:.045,slipResistance:1.3,sinkAmount:0,effectMultiplier:1.8,vibrationMultiplier:.03}
 };

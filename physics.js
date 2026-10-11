@@ -13,7 +13,7 @@ export const DRIFT_CAR_CONFIG={
  antiRoll:{front:4500,rear:2500},rearAxleCoupling:500,bumpStop:70000,maxSpringForce:18500,
  gearRatios:[3.32,2.12,1.55,1.12,.86],reverseRatio:3.28,finalDrive:4.35,highRangeRatio:1,lowRangeRatio:1,
  engineTorqueCurve:[[950,86],[1800,115],[2800,144],[3500,156],[4800,165],[6200,160],[7500,148],[8400,130],[8950,104],[9000,0]],
- idleRPM:950,redlineRPM:9000,engineBraking:10,engineResponse:8,drivetrainEfficiency:.89,
+ idleRPM:950,redlineRPM:9000,engineBraking:10,engineResponse:8,drivetrainEfficiency:.89,shiftDuration:.24,
  // Drift Stability 1.0: assists are isolated to driftCar, never touch the Niva.
  steeringAngle:.55,steeringResponse:7,throttleResponse:5.7,
  driftSteerSpeedFactor:.76,driftAssistGain:.34,driftAssistLimit:.18,driftYawBrake:2.8,

@@ -3,10 +3,10 @@ import {populateScenery} from './scenery.js?v=028';
 import {populateAnimals} from './animals.js?v=028';
 import {populatePickups} from './pickups.js?v=028';
 import {BiomeStream,biomeWeights,populateVillage,populateField} from './biomes.js?v=028';
-import {OBSTACLE_CONFIG,HILL_CONFIG,obstacleWeight,hillElevation} from './obstacles.js?v=038';
+import {OBSTACLE_CONFIG,HILL_CONFIG,obstacleWeight,hillElevation} from './obstacles.js?v=039';
 import {SURFACE_CONFIG,SURFACE_SETTINGS} from './surfaces.js?v=028';
 export const ROAD_CONFIG={activeSections:9,behind:2,ahead:6,lengths:[40,54,68],widths:[6.4,7.2,8.0],corridor:48,treeLimit:38,step:2,maxHeadingOffset:1.10,maxCurve:.32,seed:731024};
-export const SECTION_TYPES=['CROSS_AXLE','ROCK_STEPS','SIDE_SLOPE','RUT_MAZE','EROSION_GULLY','DEEP_MUD','RUT_GAUNTLET','FOREST_FORD','FALLEN_LOGS','MUD_CLIMB','TIGHT_TURNS','FAST_STRAIGHT','SHORT_STRAIGHT','FAST_CURVE','FAST_S_CURVE','JUMP','EARTH_JUMP','BLIND_CREST','DOUBLE_WAVE','FAST_HILL','BRAKING_ZONE','CHICANE','HAIRPIN','TECH_S_CURVE','APEX_TURN','RUTS','TECHNICAL_HILL','STEEP_DESCENT','ROCK_SECTION','LOG_CROSSING','BUMP_CHAIN','WASHOUT','EXIT'];
+export const SECTION_TYPES=['ROCK_CRAWL','CROSS_AXLE','ROCK_STEPS','SIDE_SLOPE','RUT_MAZE','EROSION_GULLY','DEEP_MUD','RUT_GAUNTLET','FOREST_FORD','FALLEN_LOGS','MUD_CLIMB','TIGHT_TURNS','FAST_STRAIGHT','SHORT_STRAIGHT','FAST_CURVE','FAST_S_CURVE','JUMP','EARTH_JUMP','BLIND_CREST','DOUBLE_WAVE','FAST_HILL','BRAKING_ZONE','CHICANE','HAIRPIN','TECH_S_CURVE','APEX_TURN','RUTS','TECHNICAL_HILL','STEEP_DESCENT','ROCK_SECTION','LOG_CROSSING','BUMP_CHAIN','WASHOUT','EXIT'];
 export const RALLY_CONFIG={fastLengthScale:1.2,jumpHeight:.55,jumpWidth:5.5};
 export const JUMP_TYPES=['JUMP','EARTH_JUMP','BLIND_CREST','DOUBLE_WAVE'];
 export const FAST_TYPES=['FAST_STRAIGHT','SHORT_STRAIGHT','FAST_CURVE','FAST_S_CURVE',...JUMP_TYPES,'FAST_HILL','EXIT'];
@@ -23,7 +23,12 @@ export const OFFROAD_GROUPS=[
  ['SHORT_STRAIGHT','SIDE_SLOPE','FOREST_FORD','EXIT'],
  ['CROSS_AXLE','EROSION_GULLY','ROCK_STEPS','EXIT'],
  ['RUT_MAZE','SIDE_SLOPE','FALLEN_LOGS','EXIT'],
- ['TECH_S_CURVE','EROSION_GULLY','DEEP_MUD','EXIT']
+ ['TECH_S_CURVE','EROSION_GULLY','DEEP_MUD','EXIT'],
+ ['ROCK_CRAWL','CROSS_AXLE','SIDE_SLOPE','EXIT'],
+ ['TECH_S_CURVE','ROCK_CRAWL','EROSION_GULLY','EXIT'],
+ ['SIDE_SLOPE','ROCK_CRAWL','RUT_MAZE','EXIT'],
+ ['EROSION_GULLY','ROCK_STEPS','ROCK_CRAWL','EXIT'],
+ ['ROCK_CRAWL','FOREST_FORD','CROSS_AXLE','EXIT']
 ];
 export const RALLY_GROUPS=[
  ['FAST_CURVE','SHORT_STRAIGHT','FAST_S_CURVE','JUMP','FAST_CURVE','BRAKING_ZONE','TECH_S_CURVE','APEX_TURN','EXIT'],
@@ -32,25 +37,41 @@ export const RALLY_GROUPS=[
  ['FAST_S_CURVE','FAST_HILL','BLIND_CREST','FAST_CURVE','BRAKING_ZONE','STEEP_DESCENT','APEX_TURN','CHICANE','EXIT'],
  ['FAST_CURVE','FAST_STRAIGHT','FAST_S_CURVE','JUMP','FAST_CURVE','BRAKING_ZONE','CHICANE','TECH_S_CURVE','EXIT']
 ];
-export const SECTION_LENGTHS={CROSS_AXLE:[84,96,108],ROCK_STEPS:[76,88,102],SIDE_SLOPE:[105,125,140],RUT_MAZE:[135,156,178],EROSION_GULLY:[77,90,105],DEEP_MUD:[80,95,110],RUT_GAUNTLET:[140,165,190],FOREST_FORD:[65,78,92],FALLEN_LOGS:[60,72,85],MUD_CLIMB:[92,110,128],TIGHT_TURNS:[76,92,108],FAST_STRAIGHT:[200,260,320],SHORT_STRAIGHT:[35,45,55],FAST_CURVE:[110,140,170],FAST_S_CURVE:[140,170,200],JUMP:[100,110,120],EARTH_JUMP:[115,125,135],BLIND_CREST:[120,135,150],DOUBLE_WAVE:[125,140,155],FAST_HILL:[100,130,160],BRAKING_ZONE:[110,125,140],CHICANE:[48,56,64],HAIRPIN:[40,44,48],TECH_S_CURVE:[65,80,95],APEX_TURN:[55,65,75],RUTS:[48,60,72],TECHNICAL_HILL:[50,60,70],STEEP_DESCENT:[55,65,75],ROCK_SECTION:[45,55,65],LOG_CROSSING:[65,75,85],BUMP_CHAIN:[70,80,90],WASHOUT:[65,75,85],EXIT:[75,90,105]};
+export const SECTION_LENGTHS={ROCK_CRAWL:[118,137,156],CROSS_AXLE:[84,96,108],ROCK_STEPS:[76,88,102],SIDE_SLOPE:[105,125,140],RUT_MAZE:[135,156,178],EROSION_GULLY:[77,90,105],DEEP_MUD:[80,95,110],RUT_GAUNTLET:[140,165,190],FOREST_FORD:[65,78,92],FALLEN_LOGS:[60,72,85],MUD_CLIMB:[92,110,128],TIGHT_TURNS:[76,92,108],FAST_STRAIGHT:[200,260,320],SHORT_STRAIGHT:[35,45,55],FAST_CURVE:[110,140,170],FAST_S_CURVE:[140,170,200],JUMP:[100,110,120],EARTH_JUMP:[115,125,135],BLIND_CREST:[120,135,150],DOUBLE_WAVE:[125,140,155],FAST_HILL:[100,130,160],BRAKING_ZONE:[110,125,140],CHICANE:[48,56,64],HAIRPIN:[40,44,48],TECH_S_CURVE:[65,80,95],APEX_TURN:[55,65,75],RUTS:[48,60,72],TECHNICAL_HILL:[50,60,70],STEEP_DESCENT:[55,65,75],ROCK_SECTION:[45,55,65],LOG_CROSSING:[65,75,85],BUMP_CHAIN:[70,80,90],WASHOUT:[65,75,85],EXIT:[75,90,105]};
 export const SPECIAL_TYPES=['EARTH_JUMP','BLIND_CREST','DOUBLE_WAVE','LOG_CROSSING','BUMP_CHAIN','WASHOUT'];
 export function jumpElevation(type,d,length){const center=length*.38;if(type==='JUMP')return .55*Math.exp(-(((d-center)/5.5)**2));if(type==='EARTH_JUMP')return 1.05*Math.exp(-(((d-center)/6.0)**2));if(type==='BLIND_CREST')return 1.85*Math.exp(-(((d-center)/10.5)**2));if(type==='DOUBLE_WAVE')return .48*Math.exp(-(((d-center+5)/5.0)**2))+.84*Math.exp(-(((d-center-9)/5.3)**2));return 0;}
 export function asphaltBlend(section,u){return Math.min(1,u*section.length/6,(1-u)*section.length/6);}
 export function envelope(u){return smooth(u/.16)*smooth((1-u)/.16);}
+// Stone bed is sampled identically by wheel physics and the rendered terrain.
+// Deterministic harmonics avoid hundreds of separate rock objects.
+export function rockyRoadHeight(section,u,lateral){
+ const field=section.rockField;if(!field)return 0;
+ const d=u*section.length,p=field.phase;
+ const fade=smooth((u-.095)/.105)*smooth((.915-u)/.105);
+ const a=Math.sin(d*.82+lateral*2.05+p),b=Math.sin(d*1.43-lateral*1.58+p*1.7);
+ const c=Math.cos(d*.45+lateral*2.7-p*.63),crown=Math.max(0,Math.sin(d*.58+lateral*.55+p*.37));
+ return fade*field.amplitude*(.47*a+.30*b+.17*c+.29*crown);
+}
 
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x)),smooth=x=>{x=clamp(x,0,1);return x*x*(3-2*x);};
 export class RoadWorld{
  constructor(seed=ROAD_CONFIG.seed,environment=null){this.environment=environment;this.offroadMode=false;this.reset(seed);}
  random(){this.rng=(Math.imul(this.rng,1664525)+1013904223)>>>0;return this.rng/4294967296;}
  reset(seed=this.seed){this.seed=Number(seed)>>>0;this.rng=this.seed;this.biomes=new BiomeStream(this.seed);this.sections=[];this.queue=[];this.lastGroup=-1;this.bins=new Map();this.binsDirty=true;this.nextId=0;this.distance=0;this.offset=[0,0];this.revision=(this.revision||0)+1;this.nextPickupS=120;this.nextEventS=75;this.nextComboS=220;this.nextSpecialS=700;this.lastSpecial=null;this.current=null;for(let i=0;i<ROAD_CONFIG.activeSections;i++)this.append();this.current=this.sections[0];}
- choose(){if(this.offroadMode){if(this.nextId<2)return ['SHORT_STRAIGHT','TECH_S_CURVE'][this.nextId];if(!this.queue.length){let group=Math.floor(this.random()*OFFROAD_GROUPS.length);if(group===this.lastGroup)group=(group+1)%OFFROAD_GROUPS.length;this.lastGroup=group;this.queue=OFFROAD_GROUPS[group].slice();}return this.queue.shift();}if(this.nextId<4)return ['SHORT_STRAIGHT','FAST_CURVE','FAST_S_CURVE','JUMP'][this.nextId];const progress=this.sections.at(-1)?.exitDistance||0;if(progress>=this.nextSpecialS&&(!this.queue.length||(FAST_TYPES.includes(this.queue[0])&&this.queue[0]!=='EXIT'))){let kind=SPECIAL_TYPES[Math.floor(this.random()*SPECIAL_TYPES.length)];if(kind===this.lastSpecial)kind=SPECIAL_TYPES[(SPECIAL_TYPES.indexOf(kind)+1)%SPECIAL_TYPES.length];this.lastSpecial=kind;this.queue.unshift(JUMP_TYPES.includes(kind)?'SHORT_STRAIGHT':'BRAKING_ZONE',kind,'EXIT');this.nextSpecialS=progress+OBSTACLE_CONFIG.specialSpacing[0]+this.random()*(OBSTACLE_CONFIG.specialSpacing[1]-OBSTACLE_CONFIG.specialSpacing[0]);}if(!this.queue.length){let group=Math.floor(this.random()*RALLY_GROUPS.length);if(group===this.lastGroup)group=(group+1)%RALLY_GROUPS.length;this.lastGroup=group;this.queue=RALLY_GROUPS[group].slice();}return this.queue.shift();}
+ choose(){if(this.offroadMode){if(this.nextId<2)return ['SHORT_STRAIGHT','TECH_S_CURVE'][this.nextId];if(this.nextId===2)return 'ROCK_CRAWL';if(!this.queue.length){let group=Math.floor(this.random()*OFFROAD_GROUPS.length);if(group===this.lastGroup)group=(group+1)%OFFROAD_GROUPS.length;this.lastGroup=group;this.queue=OFFROAD_GROUPS[group].slice();}return this.queue.shift();}if(this.nextId<4)return ['SHORT_STRAIGHT','FAST_CURVE','FAST_S_CURVE','JUMP'][this.nextId];const progress=this.sections.at(-1)?.exitDistance||0;if(progress>=this.nextSpecialS&&(!this.queue.length||(FAST_TYPES.includes(this.queue[0])&&this.queue[0]!=='EXIT'))){let kind=SPECIAL_TYPES[Math.floor(this.random()*SPECIAL_TYPES.length)];if(kind===this.lastSpecial)kind=SPECIAL_TYPES[(SPECIAL_TYPES.indexOf(kind)+1)%SPECIAL_TYPES.length];this.lastSpecial=kind;this.queue.unshift(JUMP_TYPES.includes(kind)?'SHORT_STRAIGHT':'BRAKING_ZONE',kind,'EXIT');this.nextSpecialS=progress+OBSTACLE_CONFIG.specialSpacing[0]+this.random()*(OBSTACLE_CONFIG.specialSpacing[1]-OBSTACLE_CONFIG.specialSpacing[0]);}if(!this.queue.length){let group=Math.floor(this.random()*RALLY_GROUPS.length);if(group===this.lastGroup)group=(group+1)%RALLY_GROUPS.length;this.lastGroup=group;this.queue=RALLY_GROUPS[group].slice();}return this.queue.shift();}
  append(){const previous=this.sections.at(-1),entry=previous?{...previous.exitTransform}:{x:0,y:0,z:40,yaw:Math.PI,width:7.2},type=this.choose(),length=SECTION_LENGTHS[type][Math.floor(this.random()*3)]*(FAST_TYPES.includes(type)?RALLY_CONFIG.fastLengthScale:1),exitWidth=this.offroadMode?5.5+this.random()*1.1:FAST_TYPES.includes(type)?9.0+this.random()*1.5:type==='BRAKING_ZONE'?6.5:6.4+this.random()*.8,difficulty=this.offroadMode?1+Math.floor(this.random()*2):Math.floor(this.random()*3),template=Math.floor(this.random()*3),sign=this.random()<.5?-1:1;let turn=0;
  if(['FAST_CURVE','FAST_HILL','STEEP_DESCENT','EXIT','MUD_CLIMB','FOREST_FORD','DEEP_MUD','TIGHT_TURNS'].includes(type))turn=sign*(.30+this.random()*.35);if(type==='BRAKING_ZONE'&&['HAIRPIN','APEX_TURN'].includes(this.queue[0]))turn=sign*.98-(entry.yaw-Math.PI);if(['HAIRPIN','APEX_TURN'].includes(type))turn=-2*(entry.yaw-Math.PI);if(Math.abs(entry.yaw-Math.PI)>.65&&type!=='HAIRPIN')turn=-(entry.yaw-Math.PI);turn=clamp(entry.yaw+turn,Math.PI-ROAD_CONFIG.maxHeadingOffset,Math.PI+ROAD_CONFIG.maxHeadingOffset)-entry.yaw;
  // Every heading remains forward in Z, including rare tight hairpin bends.
- const id=this.nextId++,startDistance=previous?previous.startDistance+previous.length:0,section={id,type,biomeProfile:this.offroadMode?{type:'FOREST',previous:'FOREST',start:0,id:0,name:''}:this.biomes.sample(startDistance),localFeatures:[],hill:null,decorationRevision:0,mode:FAST_TYPES.includes(type)?'FAST':'TECH',length,width:entry.width,entryTransform:entry,startDistance,difficulty,template,surface:'DIRT',obstacles:[],nodes:[],decorations:[]};const step=['RUT_GAUNTLET','RUT_MAZE','FOREST_FORD'].includes(type)?.75:['CROSS_AXLE','ROCK_STEPS','EROSION_GULLY','ROCK_SECTION','CHICANE','RUTS','FALLEN_LOGS'].includes(type)?.5:1.5;
+ const id=this.nextId++,startDistance=previous?previous.startDistance+previous.length:0,section={id,type,biomeProfile:this.offroadMode?{type:'FOREST',previous:'FOREST',start:0,id:0,name:''}:this.biomes.sample(startDistance),localFeatures:[],hill:null,decorationRevision:0,mode:FAST_TYPES.includes(type)?'FAST':'TECH',length,width:entry.width,entryTransform:entry,startDistance,difficulty,template,surface:'DIRT',obstacles:[],nodes:[],decorations:[]};const step=type==='ROCK_CRAWL'?.72:['RUT_GAUNTLET','RUT_MAZE','FOREST_FORD'].includes(type)?.75:['CROSS_AXLE','ROCK_STEPS','EROSION_GULLY','ROCK_SECTION','CHICANE','RUTS','FALLEN_LOGS'].includes(type)?.55:1.5;
  if(['FAST_HILL','TECHNICAL_HILL','STEEP_DESCENT'].includes(type)){const extreme=type!=='FAST_HILL'&&this.random()<HILL_CONFIG.extremeChance,angle=type==='FAST_HILL'?HILL_CONFIG.light[difficulty]:type==='TECHNICAL_HILL'?(extreme?HILL_CONFIG.extreme[difficulty]:HILL_CONFIG.hard[difficulty]):extreme?HILL_CONFIG.extremeDescent:HILL_CONFIG.descent[difficulty],span=type==='FAST_HILL'?81:extreme?16:27,ramp=type==='FAST_HILL'?6:4;section.hill={category:extreme?'EXTREME':type==='FAST_HILL'?'LIGHT':'HARD',angle,span,ramp,start:length*(type==='FAST_HILL'?.30:.40),exitRamp:type==='FAST_HILL'?55:ramp,sign:type==='STEEP_DESCENT'?-1:type==='FAST_HILL'?sign:1};section.crestSafe=true;}
  if(this.offroadMode&&type==='MUD_CLIMB')section.hill={category:'HARD',angle:[14,16,18][difficulty],span:39,ramp:8,start:length*.31,exitRamp:8,sign:1};
- if(JUMP_TYPES.includes(type))section.crestSafe=true;section.asphalt=(!this.offroadMode&&!['CHICANE','RUTS','ROCK_SECTION','LOG_CROSSING','WASHOUT','TECHNICAL_HILL',...JUMP_TYPES].includes(type)&&(section.biomeProfile.type==='VILLAGE'||startDistance%1500>1125));section.surface=this.offroadMode&&!['SHORT_STRAIGHT','EXIT'].includes(type)?'SOFT_DIRT':section.asphalt?'ASPHALT':'DIRT';this.populateEvents(section);
+ if(this.offroadMode&&type==='ROCK_CRAWL'){
+  const grade=[17,19,22][difficulty];
+  section.hill={category:'ROCK_CRAWL',angle:grade,span:Math.min(75,length*.58),ramp:13,exitRamp:15,start:length*.18,sign:1};
+  section.rockField={phase:this.random()*6.28,amplitude:.41+Math.min(.16,startDistance/5000*.16)+this.random()*.07};
+ }
+ if(this.offroadMode&&type==='ROCK_STEPS')section.rockField={phase:this.random()*6.28,amplitude:.32+this.random()*.075};
+ if(JUMP_TYPES.includes(type))section.crestSafe=true;section.asphalt=(!this.offroadMode&&!['CHICANE','RUTS','ROCK_SECTION','LOG_CROSSING','WASHOUT','TECHNICAL_HILL',...JUMP_TYPES].includes(type)&&(section.biomeProfile.type==='VILLAGE'||startDistance%1500>1125));section.surface=this.offroadMode&&['ROCK_CRAWL','ROCK_STEPS'].includes(type)?'ROCK':this.offroadMode&&!['SHORT_STRAIGHT','EXIT'].includes(type)?'SOFT_DIRT':section.asphalt?'ASPHALT':'DIRT';this.populateEvents(section);
  if(type==='LOG_CROSSING')for(let i=0;i<5;i++)section.localFeatures.push({kind:'LOG_MEDIUM',u:.38+i*.05,lateral:0,...OBSTACLE_CONFIG.types.LOG_MEDIUM,radius:2.3});
  if(type==='BUMP_CHAIN')for(let i=0;i<4;i++)section.localFeatures.push({kind:'BUMP',u:.30+i*.12,lateral:i%2?.8:-.8,...OBSTACLE_CONFIG.types.BUMP,radius:2});
  if(type==='WASHOUT')for(let i=0;i<4;i++)section.localFeatures.push({kind:'DITCH',u:.32+i*.10,lateral:i%2?1.7:-1.7,...OBSTACLE_CONFIG.types.DITCH});
@@ -60,6 +81,24 @@ export class RoadWorld{
   // Heightfield obstacles: independent wheel loads and usable terrain bypasses.
   // The first kilometres remain gentler; shape severity grows without impossible walls.
   const challenge=Math.max(0,Math.min(1,(startDistance-250)/3800));
+  if(type==='ROCK_CRAWL'||type==='ROCK_STEPS'){
+   // Long rocky mountainside, not two isolated stone bumps.
+   const crawl=type==='ROCK_CRAWL',layers=crawl?7:5;
+   for(let i=0;i<layers;i++){
+    const u=.20+i*(crawl?.103:.135)+(this.random()-.5)*.025,side=i%2?-1:1;
+    add('ROCK_STEP',u,side*(crawl?.34:.38),{
+     shape:'ledge',height:(crawl?.39:.36)+.11*challenge+this.random()*.075,
+     radius:crawl?2.03:1.83,longRadius:1.35+this.random()*.43
+    });
+   }
+   for(let i=0;i<(crawl?9:6);i++){
+    const u=.19+i*(crawl?.074:.105)+(this.random()-.5)*.025,side=i%2?-1:1;
+    add('ROCK_CRAWL_BOULDER',u,side*(.82+this.random()*1.13),{
+     height:.31+.18*challenge+this.random()*.15,radius:.72+this.random()*.33,
+     longRadius:.83+this.random()*.40
+    });
+   }
+  }
   if(type==='CROSS_AXLE'){
    for(const [u,side] of [[.35,1],[.67,-1]]){
     const delta=2.24/length,peak=.28+.09*challenge+this.random()*.045;
@@ -110,7 +149,7 @@ export class RoadWorld{
   if(type==='MUD_CLIMB')for(const u of [.35,.50,.64,.78])add('MUD_MEDIUM',u,(this.random()-.5)*.7,{radius:1.65,longRadius:4,mudDepth:.41,height:-.050});
   if(type==='TIGHT_TURNS')for(const u of [.32,.72])add('SOFT_PATCH',u,(this.random()-.5)*1.8,{radius:1.55,longRadius:3});
  }
- const count=Math.ceil(length/step),samples=new Set(Array.from({length:count+1},(_,i)=>i*length/count));for(const o of section.localFeatures){if(o.shape==='long_rut'||o.shape==='river'||o.shape==='bank')continue;for(let d=-o.longRadius*OBSTACLE_CONFIG.detailRadius;d<=o.longRadius*OBSTACLE_CONFIG.detailRadius;d+=(o.shape==='log'?OBSTACLE_CONFIG.logSamplingStep:o.surfaceType&&o.surfaceType!=='ROCK'?OBSTACLE_CONFIG.surfaceSamplingStep:OBSTACLE_CONFIG.samplingStep))samples.add(clamp(o.u*length+d,0,length));}const distances=[...samples].sort((a,b)=>a-b).filter((d,i,all)=>!i||d-all[i-1]>.005);let x=entry.x,z=entry.z,lastDistance=0;
+ const count=Math.ceil(length/step),samples=new Set(Array.from({length:count+1},(_,i)=>i*length/count));for(const o of section.localFeatures){if(o.shape==='long_rut'||o.shape==='river'||o.shape==='bank')continue;for(let d=-o.longRadius*OBSTACLE_CONFIG.detailRadius;d<=o.longRadius*OBSTACLE_CONFIG.detailRadius;d+=(o.shape==='log'?OBSTACLE_CONFIG.logSamplingStep:['ROCK_STEP','ROCK_CRAWL_BOULDER','CROSS_AXLE'].includes(o.kind)?.55:['DIAGONAL_GULLY','GULLY_LIP'].includes(o.kind)?.56:o.surfaceType&&o.surfaceType!=='ROCK'?OBSTACLE_CONFIG.surfaceSamplingStep:OBSTACLE_CONFIG.samplingStep))samples.add(clamp(o.u*length+d,0,length));}const distances=[...samples].sort((a,b)=>a-b).filter((d,i,all)=>!i||d-all[i-1]>.005);let x=entry.x,z=entry.z,lastDistance=0;
  const heading=u=>entry.yaw+turn*smooth(u)+(['FAST_S_CURVE','TECH_S_CURVE','TIGHT_TURNS'].includes(type)?sign*Math.min(type==='TIGHT_TURNS'?.86:type==='TECH_S_CURVE'?.65:.38,1.38-Math.abs(entry.yaw-Math.PI))*Math.sin(2*Math.PI*u)**3:0);
  for(const distance of distances){const u=distance/length,yaw=heading(u);if(distance){const angle=heading((distance+lastDistance)/(2*length));x+=Math.sin(angle)*(distance-lastDistance);z+=Math.cos(angle)*(distance-lastDistance);}const env=Math.sin(Math.PI*u)**2,jump=jumpElevation(type,distance,length)*envelope(u),wave=type==='FAST_STRAIGHT'&&id>=4?.10*Math.sin(distance/9)**2*envelope(u):0,y=entry.y+(section.hill?hillElevation(distance,section.hill):0)+.08*env+jump+wave;section.nodes.push({x,y,z,yaw,width:entry.width+(exitWidth-entry.width)*smooth(u),u,s:startDistance+distance});lastDistance=distance;}
  const actualCount=section.nodes.length-1;
@@ -144,7 +183,7 @@ export class RoadWorld{
  indexSegments(){this.bins.clear();for(const section of this.sections)for(let i=0;i<section.nodes.length-1;i++){const a=section.nodes[i],b=section.nodes[i+1],entry={section,i,a,b};for(let cell=Math.floor((b.z-52)/12);cell<=Math.floor((a.z+52)/12);cell++){if(!this.bins.has(cell))this.bins.set(cell,[]);this.bins.get(cell).push(entry);}}this.zMin=Math.min(...this.bins.keys());this.zMax=Math.max(...this.bins.keys());this.binsDirty=false;}
  locate(x,z){if(this.binsDirty)this.indexSegments();let best=null,distance=Infinity;const candidates=this.bins.get(Math.floor(z/12))||(this.finiteRace?this.bins.get(clamp(Math.floor(z/12),this.zMin,this.zMax)):null)||[...this.bins.values()].flat();for(const {section,i,a,b} of candidates){const dx=b.x-a.x,dz=b.z-a.z,t=clamp(((x-a.x)*dx+(z-a.z)*dz)/(dx*dx+dz*dz),0,1),cx=a.x+dx*t,cz=a.z+dz*t,d=(x-cx)**2+(z-cz)**2;if(d<distance){distance=d;const yaw=a.yaw+(b.yaw-a.yaw)*t;best={section,t,index:i,x:cx,z:cz,y:a.y+(b.y-a.y)*t,yaw,width:a.width+(b.width-a.width)*t,u:a.u+(b.u-a.u)*t,s:a.s+(b.s-a.s)*t,lateral:(x-cx)*Math.cos(yaw)-(z-cz)*Math.sin(yaw)};}}return best;}
  update(x,z){const point=this.locate(x,z);this.current=point.section;this.distance=Math.max(this.distance,point.s-18);while(this.sections.at(-1).id<this.current.id+ROAD_CONFIG.ahead)this.append();while(this.sections.length>ROAD_CONFIG.activeSections&&this.sections[0].id<this.current.id-ROAD_CONFIG.behind)this.sections.shift(),this.binsDirty=true;return point;}
- localHeight(section,u,lateral){let h=0;for(const o of section.obstacles)h+=o.height*obstacleWeight(o,u,lateral,section.length);for(const o of section.localFeatures)h+=o.height*obstacleWeight(o,u,lateral,section.length);if(section.type==='RUTS')h-=.115*envelope(u)*(Math.exp(-((((lateral-.84)/.40)**2)))+Math.exp(-((((lateral+.84)/.40)**2))));return h*envelope(u);}
+ localHeight(section,u,lateral){let h=0;for(const o of section.obstacles)h+=o.height*obstacleWeight(o,u,lateral,section.length);for(const o of section.localFeatures)h+=o.height*obstacleWeight(o,u,lateral,section.length);if(section.type==='RUTS')h-=.115*envelope(u)*(Math.exp(-((((lateral-.84)/.40)**2)))+Math.exp(-((((lateral+.84)/.40)**2))));return h*envelope(u)+rockyRoadHeight(section,u,lateral);}
  height(x,z){const p=this.locate(x,z),outside=Math.max(0,Math.abs(p.lateral)-p.width/2);return p.y+this.localHeight(p.section,p.u,p.lateral)+.025*outside+.12*Math.sin(p.lateral*.2)**2*smooth(outside/5);}
  normal(x,z){const h=.08,a=this.height(x-h,z)-this.height(x+h,z),b=this.height(x,z-h)-this.height(x,z+h),length=Math.hypot(a,2*h,b);return[a/length,2*h/length,b/length];}
  surface(x,z){return this.surfaceAt(this.locate(x,z));}

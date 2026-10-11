@@ -28,7 +28,13 @@ export const OFFROAD_GROUPS=[
  ['TECH_S_CURVE','ROCK_CRAWL','EROSION_GULLY','EXIT'],
  ['SIDE_SLOPE','ROCK_CRAWL','RUT_MAZE','EXIT'],
  ['EROSION_GULLY','ROCK_STEPS','ROCK_CRAWL','EXIT'],
- ['ROCK_CRAWL','FOREST_FORD','CROSS_AXLE','EXIT']
+ ['ROCK_CRAWL','FOREST_FORD','CROSS_AXLE','EXIT'],
+ ['EROSION_GULLY','SIDE_SLOPE','MUD_CLIMB','EXIT'],
+ ['SIDE_SLOPE','CROSS_AXLE','FOREST_FORD','EXIT'],
+ ['MUD_CLIMB','EROSION_GULLY','SIDE_SLOPE','EXIT'],
+ ['ROCK_CRAWL','SIDE_SLOPE','EROSION_GULLY','EXIT'],
+ ['CROSS_AXLE','MUD_CLIMB','FOREST_FORD','EXIT'],
+ ['SIDE_SLOPE','EROSION_GULLY','ROCK_STEPS','EXIT']
 ];
 export const RALLY_GROUPS=[
  ['FAST_CURVE','SHORT_STRAIGHT','FAST_S_CURVE','JUMP','FAST_CURVE','BRAKING_ZONE','TECH_S_CURVE','APEX_TURN','EXIT'],
@@ -71,6 +77,12 @@ export class RoadWorld{
   section.rockField={phase:this.random()*6.28,amplitude:.41+Math.min(.16,startDistance/5000*.16)+this.random()*.07};
  }
  if(this.offroadMode&&type==='ROCK_STEPS')section.rockField={phase:this.random()*6.28,amplitude:.32+this.random()*.075};
+ // Some deep diagonal sections are uphill rather than isolated flat challenges.
+ if(this.offroadMode&&['CROSS_AXLE','EROSION_GULLY'].includes(type)&&this.random()<.60){
+  const grade=type==='CROSS_AXLE'?12+this.random()*5:9+this.random()*5;
+  section.hill={category:'DIAGONAL_CLIMB',angle:grade,span:Math.min(56,length*.64),ramp:10,exitRamp:13,start:length*.17,sign:1};
+ }
+ if(this.offroadMode&&type==='ROCK_CRAWL'&&this.random()<.52)section.rockBankSide=this.random()<.5?-1:1;
  if(JUMP_TYPES.includes(type))section.crestSafe=true;section.asphalt=(!this.offroadMode&&!['CHICANE','RUTS','ROCK_SECTION','LOG_CROSSING','WASHOUT','TECHNICAL_HILL',...JUMP_TYPES].includes(type)&&(section.biomeProfile.type==='VILLAGE'||startDistance%1500>1125));section.surface=this.offroadMode&&['ROCK_CRAWL','ROCK_STEPS'].includes(type)?'ROCK':this.offroadMode&&!['SHORT_STRAIGHT','EXIT'].includes(type)?'SOFT_DIRT':section.asphalt?'ASPHALT':'DIRT';this.populateEvents(section);
  if(type==='LOG_CROSSING')for(let i=0;i<5;i++)section.localFeatures.push({kind:'LOG_MEDIUM',u:.38+i*.05,lateral:0,...OBSTACLE_CONFIG.types.LOG_MEDIUM,radius:2.3});
  if(type==='BUMP_CHAIN')for(let i=0;i<4;i++)section.localFeatures.push({kind:'BUMP',u:.30+i*.12,lateral:i%2?.8:-.8,...OBSTACLE_CONFIG.types.BUMP,radius:2});
@@ -112,8 +124,32 @@ export class RoadWorld{
   }
   if(type==='SIDE_SLOPE'){
    add('SIDE_BANK',.5,0,{shape:'bank',height:sign*(.52+.20*challenge+this.random()*.06),radius:section.width/2+1.1,startU:.16,endU:.85});
+   // A sidehill with two oblique muddy washouts: the driver must read the camber.
+   for(const [u,side] of [[.40,sign],[.70,-sign]]){
+    add('DIAGONAL_GULLY',u,0,{height:-.36-.14*challenge,radius:section.width/2+.25,
+     longRadius:2.55,skew:side*1.15,mudDepth:.73+.11*challenge});
+    add('GULLY_LIP',u-.031,side*.80,{height:.19+.07*challenge,radius:2.55,longRadius:1.5,skew:side*1.15});
+   }
    for(const side of [-1,1])add('SOFT_PATCH',.52,side*.9,{shape:'long_rut',startU:.32,endU:.73,
     radius:.44,longRadius:1,height:-.09-.045*challenge,pathWander:.12,pathPhase:this.random()*6.28});
+  }
+  if(type==='MUD_CLIMB'){
+   // True climbing diagonals: uphill traction varies across the four contact patches.
+   const side=this.random()<.5?-1:1;
+   for(const [u,flip] of [[.46,1],[.72,-1]]){
+    add('DIAGONAL_GULLY',u,side*flip*.22,{height:-.44-.13*challenge,
+     radius:section.width/2+.15,longRadius:2.45,skew:side*flip*1.18,mudDepth:.83});
+    add('GULLY_LIP',u-.032,-side*flip*.85,{height:.20+.08*challenge,
+     radius:2.3,longRadius:1.45,skew:side*flip*1.18});
+   }
+   if(this.random()<.7)add('SIDE_BANK',.50,0,{shape:'bank',height:side*(.33+.09*challenge),
+    radius:section.width/2+1,startU:.26,endU:.86});
+  }
+  if(type==='ROCK_CRAWL'&&section.rockBankSide){
+   add('SIDE_BANK',.5,0,{shape:'bank',height:section.rockBankSide*(.35+.10*challenge),
+    radius:section.width/2+1.0,startU:.32,endU:.78});
+   add('DIAGONAL_GULLY',.62,section.rockBankSide*.35,{height:-.27-.09*challenge,
+    radius:section.width/2+.05,longRadius:2.4,skew:section.rockBankSide*1.04,mudDepth:.64});
   }
   if(type==='RUT_MAZE'){
    // Shifting mud ruts deeper than before, with raised lips and angled washouts.
@@ -154,8 +190,26 @@ export class RoadWorld{
   }
   if(type==='FOREST_FORD'){
    const depth=.46+this.random()*.12;
-   // A transverse stream crosses the lane and continues between trees beyond both verges.
-   add('PUDDLE',.52,0,{shape:'river',radius:section.width/2+11,longRadius:6.8+this.random()*1.9,waterDepth:depth,height:-depth*.82});
+   // Riverbed always exists: on selected crossings 4–6 uneven boulders hide beneath the water.
+   section.fordRocks=this.random()<.70;
+   section.fordVariant=section.fordRocks?'ROCKY':'MUDDY';
+   add('PUDDLE',.52,0,{shape:'river',radius:section.width/2+11,longRadius:6.8+this.random()*1.9,
+    waterDepth:depth,height:-depth*.82});
+   if(section.fordRocks){
+    const count=4+Math.floor(this.random()*3),stepU=.125/(count-1);
+    for(let i=0;i<count;i++){
+     const side=i%2?-1:1,u=.46+i*stepU+(this.random()-.5)*.013;
+     add('ROCK_CRAWL_BOULDER',u,side*(.72+this.random()*1.05),{
+      radius:.64+this.random()*.26,longRadius:.78+this.random()*.36,
+      height:.16+this.random()*.19,underwater:true,surfaceType:null
+     });
+    }
+   }
+   // The muddy exit lip can be more challenging than the water itself.
+   if(this.random()<.68){
+    add('MUD_MEDIUM',.68,(this.random()-.5)*1.2,{radius:1.45,longRadius:2.4,mudDepth:.72,height:-.16});
+    add('GULLY_LIP',.68,(this.random()<.5?-1:1)*1.13,{height:.17,radius:2.0,longRadius:1.0,skew:.6});
+   }
   }
   if(type==='FALLEN_LOGS')for(const u of [.40,.57,.76])add('LOG_LARGE',u,(this.random()-.5)*.45,{radius:section.width/2+.6,longRadius:.55,height:.31+this.random()*.11});
   if(type==='MUD_CLIMB')for(const u of [.35,.50,.64,.78])add('MUD_MEDIUM',u,(this.random()-.5)*.7,{radius:1.65,longRadius:4,mudDepth:.41,height:-.050});
@@ -212,7 +266,7 @@ export class RoadWorld{
    c.effectMultiplier*=1.18;
   }
  }const offroadFactor=onRoad?0:smooth((edge-p.width/2)/SURFACE_SETTINGS.offroadShoulderBlend);const result={surfaceType,mudDepth,waterDepth,offroadFactor,...c};return this.environment?this.environment.surface(result):result;}
- visualMaterial(section,u,lateral){for(const o of section.localFeatures){if(o.shape==='bank')continue;if(obstacleWeight(o,u,lateral,section.length)>.15)return o.kind.startsWith('LOG_')?'WOOD':o.kind==='ROCK'?'HAZARD_ROCK':['PIT','POTHOLE','SHORT_RUT','DITCH'].includes(o.kind)?'PIT':o.kind==='BUMP'?'EARTH_BUMP':o.surfaceType==='MUD'?'MUD':o.surfaceType||'DIRT';}return this.surfaceAt({section,u,lateral,width:section.nodes[Math.min(section.nodes.length-1,Math.floor(u*(section.nodes.length-1)))].width}).surfaceType;}
+ visualMaterial(section,u,lateral){for(const o of section.localFeatures){if(o.shape==='bank')continue;if(obstacleWeight(o,u,lateral,section.length)>.15)return o.kind.startsWith('LOG_')?'WOOD':o.surfaceType==='ROCK'||o.kind.includes('ROCK')?'HAZARD_ROCK':['PIT','POTHOLE','SHORT_RUT','DITCH'].includes(o.kind)?'PIT':o.kind==='BUMP'?'EARTH_BUMP':o.surfaceType==='MUD'?'MUD':o.surfaceType||'DIRT';}return this.surfaceAt({section,u,lateral,width:section.nodes[Math.min(section.nodes.length-1,Math.floor(u*(section.nodes.length-1)))].width}).surfaceType;}
  point(section=this.current,u=.15){u=clamp(u,0,1);let lo=0,hi=section.nodes.length-1;while(hi-lo>1){const mid=(lo+hi)>>1;if(section.nodes[mid].u<=u)lo=mid;else hi=mid;}const a=section.nodes[lo],b=section.nodes[hi],t=(u-a.u)/(b.u-a.u);return{x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t,z:a.z+(b.z-a.z)*t,yaw:a.yaw+(b.yaw-a.yaw)*t,width:a.width+(b.width-a.width)*t};}
 
  shift(dx,dz){for(const s of this.sections){for(const n of s.nodes){n.x-=dx;n.z-=dz;}for(const tr of [s.entryTransform,s.exitTransform,...s.decorations,...(s.visualDecor||[])]){tr.x-=dx;tr.z-=dz;}}this.offset[0]+=dx;this.offset[1]+=dz;this.revision++;this.binsDirty=true;}

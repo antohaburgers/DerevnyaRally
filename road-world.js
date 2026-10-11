@@ -249,6 +249,13 @@ export class RoadWorld{
  indexSegments(){this.bins.clear();for(const section of this.sections)for(let i=0;i<section.nodes.length-1;i++){const a=section.nodes[i],b=section.nodes[i+1],entry={section,i,a,b};for(let cell=Math.floor((b.z-52)/12);cell<=Math.floor((a.z+52)/12);cell++){if(!this.bins.has(cell))this.bins.set(cell,[]);this.bins.get(cell).push(entry);}}this.zMin=Math.min(...this.bins.keys());this.zMax=Math.max(...this.bins.keys());this.binsDirty=false;}
  locate(x,z){if(this.binsDirty)this.indexSegments();let best=null,distance=Infinity;const candidates=this.bins.get(Math.floor(z/12))||(this.finiteRace?this.bins.get(clamp(Math.floor(z/12),this.zMin,this.zMax)):null)||[...this.bins.values()].flat();for(const {section,i,a,b} of candidates){const dx=b.x-a.x,dz=b.z-a.z,t=clamp(((x-a.x)*dx+(z-a.z)*dz)/(dx*dx+dz*dz),0,1),cx=a.x+dx*t,cz=a.z+dz*t,d=(x-cx)**2+(z-cz)**2;if(d<distance){distance=d;const yaw=a.yaw+(b.yaw-a.yaw)*t;best={section,t,index:i,x:cx,z:cz,y:a.y+(b.y-a.y)*t,yaw,width:a.width+(b.width-a.width)*t,u:a.u+(b.u-a.u)*t,s:a.s+(b.s-a.s)*t,lateral:(x-cx)*Math.cos(yaw)-(z-cz)*Math.sin(yaw)};}}return best;}
  update(x,z){const point=this.locate(x,z);this.current=point.section;this.distance=Math.max(this.distance,point.s-18);while(this.sections.at(-1).id<this.current.id+ROAD_CONFIG.ahead)this.append();while(this.sections.length>ROAD_CONFIG.activeSections&&this.sections[0].id<this.current.id-ROAD_CONFIG.behind)this.sections.shift(),this.binsDirty=true;return point;}
+ submergedRockHeight(section,u,lateral){
+  if(!section.fordRocks)return 0;
+  let total=0;
+  for(const feature of section.localFeatures)if(feature.underwater)
+   total+=feature.height*obstacleWeight(feature,u,lateral,section.length);
+  return total*envelope(u);
+ }
  localHeight(section,u,lateral){let h=0;for(const o of section.obstacles)h+=o.height*obstacleWeight(o,u,lateral,section.length);for(const o of section.localFeatures)h+=o.height*obstacleWeight(o,u,lateral,section.length);if(section.type==='RUTS')h-=.115*envelope(u)*(Math.exp(-((((lateral-.84)/.40)**2)))+Math.exp(-((((lateral+.84)/.40)**2))));return h*envelope(u)+rockyRoadHeight(section,u,lateral);}
  height(x,z){const p=this.locate(x,z),outside=Math.max(0,Math.abs(p.lateral)-p.width/2);return p.y+this.localHeight(p.section,p.u,p.lateral)+.025*outside+.12*Math.sin(p.lateral*.2)**2*smooth(outside/5);}
  normal(x,z){const h=.08,a=this.height(x-h,z)-this.height(x+h,z),b=this.height(x,z-h)-this.height(x,z+h),length=Math.hypot(a,2*h,b);return[a/length,2*h/length,b/length];}

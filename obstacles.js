@@ -1,4 +1,8 @@
 export const OBSTACLE_CONFIG={chance:1,minimumStart:14,clearLanding:36,localSpacing:[30,70],comboSpacing:[150,300],specialSpacing:[500,900],maxFeatures:28,samplingStep:.30,surfaceSamplingStep:.60,logSamplingStep:.10,detailRadius:3,types:{
+ CROSS_AXLE:{height:.29,radius:.94,longRadius:1.65,surfaceType:'ROCK'},
+ ROCK_STEP:{height:.32,radius:2.15,longRadius:1.8,shape:'ledge',surfaceType:'ROCK'},
+ SIDE_BANK:{height:.62,radius:3.8,longRadius:1,shape:'bank'},
+ GULLY:{height:-.32,radius:2.15,longRadius:2.6,shape:'gully',surfaceType:'SOFT_DIRT'},
  MUD_PATCH:{height:-.07,radius:.55,longRadius:2.0,surfaceType:'MUD',mudDepth:.60},
  MUD_MEDIUM:{height:-.08,radius:1.25,longRadius:3.0,surfaceType:'MUD',mudDepth:.52},
  MUD_STRIP:{height:-.09,radius:.65,longRadius:4.2,surfaceType:'MUD',mudDepth:.65},
@@ -16,6 +20,22 @@ export const OBSTACLE_CONFIG={chance:1,minimumStart:14,clearLanding:36,localSpac
 }};
 export const HILL_CONFIG={light:[12,16,20],hard:[25,28,30],extreme:[35,37,39],descent:[22,27,30],extremeDescent:35,extremeChance:.13};
 export function obstacleWeight(o,u,lateral,length){
+ if(o.shape==='bank'){
+  const smooth=t=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t);};
+  const along=smooth((u-o.startU)/.09)*smooth((o.endU-u)/.09);
+  return along*Math.max(-1,Math.min(1,(lateral-o.lateral)/o.radius));
+ }
+ if(o.shape==='ledge'){
+  const smooth=t=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t);};
+  return smooth((o.longRadius+.85-Math.abs((u-o.u)*length))/.85)*
+         smooth((o.radius+.6-Math.abs(lateral-o.lateral))/.6);
+ }
+ if(o.shape==='gully'){
+  const smooth=t=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t);};
+  const along=Math.abs((u-o.u)*length);
+  return Math.cos(Math.PI*.5*Math.min(1,along/o.longRadius))*
+         smooth((o.radius+.65-Math.abs(lateral-o.lateral))/.9);
+ }
  if(o.shape==='long_rut'){
   const smooth=t=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t);};
   const along=smooth((u-o.startU)/.085)*smooth((o.endU-u)/.085);

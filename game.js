@@ -29,8 +29,8 @@ import {VisualCar} from './visual-car.js?v=028';
 import {PAINTS,STOCK_BUILD,loadBuild,saveBuild,tireSurface,boostLevel} from './garage.js?v=033';
 import {createLiveryRenderer} from './livery-renderer.js?v=033';
 import {LIVERY_CATALOG,liveryAsset} from './livery-system.js?v=033';
-import {OffroadVehicle,CAR_CONFIG,DRIFT_CAR_CONFIG,rotate} from './physics.js?v=035';
-import {createAE86Model,AE86_STYLE} from './ae86-model.js?v=034';
+import {OffroadVehicle,CAR_CONFIG,DRIFT_CAR_CONFIG,rotate} from './physics.js?v=036';
+import {createAE86Model,AE86_STYLE} from './ae86-model.js?v=036';
 import {DriftScore} from './drift-score.js?v=034';
 const driftScore=new DriftScore();
 import {EngineAudio} from './engine-audio.js?v=034';
@@ -137,7 +137,7 @@ let ids=profile.map((_,i)=>i);const area=profile.reduce((s,p,i)=>{const q=profil
 for(let i=0;i<profile.length;i++){const a=profile[i],b=profile[(i+1)%profile.length],p=[-half(a),a[1],a[0]],q=[half(a),a[1],a[0]],r=[half(b),b[1],b[0]],t=[-half(b),b[1],b[0]];tri(p,q,r);tri(p,r,t);}return mesh(vv,nn);}
 const lower=[[-1.82,.53]];for(const centre of [-1.1,1.1]){const radius=.51,start=Math.asin((.53-.44)/radius);for(let i=0;i<=14;i++){const a=Math.PI-start-(Math.PI-2*start)*i/14;lower.push([centre+radius*Math.cos(a),.44+radius*Math.sin(a)]);}}lower.push([1.82,.53],[1.84,1.06],[1.77,1.145],[.75,1.185],[.55,1.17],[-1.81,1.09]);
 const shell=extrude(lower,1.68),cabin=extrude([[-1.81,1.085],[-1.43,1.70],[.17,1.70],[.75,1.18]],1.58);
-const ae86=createAE86Model(extrude,polygonMesh);
+const ae86=createAE86Model(extrude,polygonMesh,mesh);
 function sheet(xs,zs,top,side,warp=(x,z)=>z){const pt=(x,z,y)=>[x,y,warp(x,z)];const v=[],n=[];function triangle(a,b,c){const normal=norm(cross(b.map((v,i)=>v-a[i]),c.map((v,i)=>v-a[i])));for(const p of [a,b,c]){v.push(...p);n.push(...normal);}}
 for(let j=0;j<zs.length-1;j++)for(let i=0;i<xs.length-1;i++){const a=pt(xs[i],zs[j],top(xs[i],zs[j])),b=pt(xs[i+1],zs[j],top(xs[i+1],zs[j])),c=pt(xs[i+1],zs[j+1],top(xs[i+1],zs[j+1])),d=pt(xs[i],zs[j+1],top(xs[i],zs[j+1]));triangle(a,d,b);triangle(b,d,c);}
 for(const x of [xs[0],xs.at(-1)])for(let j=0;j<zs.length-1;j++){const a=pt(x,zs[j],top(x,zs[j])),b=pt(x,zs[j+1],top(x,zs[j+1])),c=pt(x,zs[j+1],side(x,zs[j+1])),d=pt(x,zs[j],side(x,zs[j]));triangle(a,b,c);triangle(a,c,d);}
@@ -196,47 +196,29 @@ let body;function part(x,y,z,sx,sy,sz,col){draw(cube,mul(body,matrix(x,y,z,sx,sy
 function drawAE86(){
  body=visual.matrix;const p=AE86_STYLE;
  draw(ae86.shell,body,p.white);draw(ae86.cabin,body,p.white);
- for(const side of [-1,1]){
-  // Classic panda two-tone and sharp 1980s door crease.
-  part(side*.791,.84,-.05,.019,.18,1.9,p.black);
-  part(side*.792,.79,-1.78,.018,.15,.15,p.black);
-  part(side*.792,.79,1.78,.018,.15,.15,p.black);
-  part(side*.799,.65,-.04,.01,.045,1.25,p.trim);
-  part(side*.799,1.01,-.45,.025,.023,1.92,p.black);
-  part(side*.799,.83,-.23,.03,.025,.13,p.metal);
-  part(side*.80,1.04,.35,.08,.10,.10,p.black);
- }
- part(0,1.045,1.22,1.53,.046,1.1,p.white); // flat bonnet
- part(0,1.54,-.88,1.33,.045,.88,p.white);
+ draw(ae86.roof,body,p.roof);draw(ae86.bonnet,body,p.white);
  draw(ae86.frontGlass,body,p.glass);draw(ae86.backGlass,body,p.glass);
- for(const g of ae86.glass)draw(g,body,p.glass);
- for(const arch of ae86.arches)draw(arch,body,p.trim);
- part(0,.64,1.95,1.67,.14,.13,p.black);
- part(0,.83,1.96,1.01,.14,.035,p.black);
- for(const side of [-1,1]){
-  part(side*.53,1.045,1.79,.35,.035,.25,p.black);
-  part(side*.52,.94,1.977,.34,.15,.038,p.black);
-  part(side*.52,.94,2.001,.26,.076,.015,environment.headlights?[.98,.97,.83]:p.metal);
-  part(side*.75,.86,1.981,.12,.11,.025,p.indicator);
-  part(side*.55,.86,-1.975,.46,.15,.035,p.tail);
- }
- part(0,.66,-2.0,1.66,.14,.12,p.black);
- part(0,1.02,-1.84,1.23,.055,.075,p.white);
- part(0,.81,-2.001,.41,.12,.013,p.metal);
- // Each rotating wheel follows the active chassis; no frozen wheel sprites.
- const c=physics.c,sz=c.wheelRadius;
- const axle=d=>new Float32Array([0,d,0,0,-.24,0,0,0,0,0,d,0,0,0,0,1]);
+ for(const window of ae86.glass)draw(window,body,p.glass);
+ draw(ae86.arches,body,p.trim);
+ for(const detail of ae86.details)draw(detail.shape,body,p[detail.tone]);
+ // Cylinder's axis is Y, but a real wheel rolls around its local X axle.
+ // Previous wheel matrix had two parallel columns, squashing rims to a plane.
+ const radius=physics.c.wheelRadius;
+ const wheelCylinder=(diameter,width,offset=0)=>new Float32Array([0,diameter,0,0,width,0,0,0,0,0,diameter,0,offset,0,0,1]);
  for(const w of visual.wheels){
   if(w.detached)continue;
-  const up=rotate(visual.q,[0,1,0]),forward=rotate(visual.q,[Math.sin(w.steer),0,Math.cos(w.steer)]);
+  const up=rotate(visual.q,[0,1,0]);
+  const forward=rotate(visual.q,[Math.sin(w.steer),0,Math.cos(w.steer)]);
   const axis=w.front?norm(cross(up,forward)):rotate(visual.q,[1,0,0]);
   const wheelUp=norm(cross(forward,axis));
-  let m=new Float32Array([...axis,0,...wheelUp,0,...forward,0,...w.position.map((v,i)=>v-(i===1?w.visualSink||0:0)),1]);
+  const pos=w.position.map((value,i)=>value-(i===1?w.visualSink||0:0));
+  let m=new Float32Array([...axis,0,...wheelUp,0,...forward,0,...pos,1]);
   m=mul(m,rotateX(w.angle));
-  draw(cylinder,mul(m,axle(sz*2)),rubber);
-  draw(cylinder,mul(m,axle(sz*1.28)),p.black);
-  draw(cylinder,mul(m,axle(sz*.95)),p.metal);
-  draw(cylinder,mul(m,axle(sz*.24)),p.black);
+  draw(cylinder,mul(m,wheelCylinder(radius*2,.245)),p.black);
+  const outer=Math.sign(w.x)*.006;
+  draw(cylinder,mul(m,wheelCylinder(radius*1.43,.251,outer)),p.rim);
+  draw(cylinder,mul(m,wheelCylinder(radius*.53,.260,outer)),p.trim);
+  draw(cylinder,mul(m,wheelCylinder(radius*.20,.270,outer)),p.metal);
  }
 }
 function vehicle(eye){if(gameMode===GAME_MODE.ASPHALT){drawAE86();return;}body=visual.matrix;const paint=PAINTS[garageBuild.color]||green;draw(shell,body,paint);draw(cabin,body,paint);draw(roof,body,paint);draw(bonnet,body,paint);

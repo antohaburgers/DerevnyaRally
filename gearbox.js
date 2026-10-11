@@ -48,12 +48,20 @@ export function chooseShift(state,c){
   const throttle=clamp(Math.max(state.throttle||0,state.throttleInput||0),0,1);
   const speed=Math.abs(state.vehicleSpeed||0),low=state.transferRange==='L';
   const currentRoadRPM=rpmAtSpeed(speed,g,c,state.transferRange);
-  // Do not shift in the middle of a sustained high-angle drift. Keep 2nd/3rd alive
-  // until the limiter needs another gear; use speed rather than wheelspin.
-  if(state.driftCar&&g>0&&speed>22&&Math.abs(state.driftAngle||0)>.13&&throttle>.28&&state.currentRPM>3500&&state.currentRPM<c.redlineRPM-260)return null;
   const nextRoadRPM=g>1?rpmAtSpeed(speed,g-1,c,state.transferRange):Infinity;
   const nextWheelRPM=g>1?state.currentRPM*c.gearRatios[g-2]/c.gearRatios[g-1]:Infinity;
   const safeDown=g>1&&nextRoadRPM<c.redlineRPM-450&&(state.airborne||nextWheelRPM<c.redlineRPM-250);
+  if(state.driftCar){
+    // Standalone drift map. Do not let tyre wheelspin trigger a premature upshift.
+    const sliding=speed>18&&Math.abs(state.driftAngle||0)>.10&&throttle>.18;
+    const minRoad=tune.driftMinHoldRoadRPM||2250;
+    if(sliding&&g>=2&&g<=4&&currentRoadRPM>=minRoad&&state.currentRPM<(tune.driftHoldMaxRPM||7450))return null;
+    // Below the useful torque band, recover ONE gear at a time outside a stable slide.
+    if(safeDown&&currentRoadRPM<tune.coastDownRPM&&(!sliding||currentRoadRPM<minRoad))return{gear:g-1,event:'DOWNSHIFT'};
+    const upRPM=Math.min(c.redlineRPM-750,tune.baseUpRPM+(tune.fullUpRPM-tune.baseUpRPM)*Math.pow(throttle,tune.throttleExponent));
+    if(g<5&&speed>6&&!state.airborne&&state.currentRPM>=upRPM&&currentRoadRPM>=upRPM*(tune.driftUpRoadFactor||.73))return{gear:g+1,event:'UPSHIFT'};
+    return null;
+  }
   if(low){
     const lowUp=tune.lowUpRPM[0]+(tune.lowUpRPM[1]-tune.lowUpRPM[0])*throttle;
     // In LOW range, spinning wheels must not force the auto box into 4th or 5th at walking speed.

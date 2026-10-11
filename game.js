@@ -24,13 +24,13 @@ import {VehicleFeedback} from './feedback.js?v=028';
 import {TreeCollisions,TREE_CONFIG} from './trees.js?v=028';
 import {bindThrottle} from './controls.js?v=028';
 import {HoodCamera,CAMERA_CONFIG} from './cameras.js?v=028';
-import {RoadWorld,ROAD_CONFIG,asphaltBlend} from './road-world.js?v=034';
+import {RoadWorld,ROAD_CONFIG,asphaltBlend} from './road-world.js?v=037';
 import {VisualCar} from './visual-car.js?v=028';
 import {PAINTS,STOCK_BUILD,loadBuild,saveBuild,tireSurface,boostLevel} from './garage.js?v=033';
 import {createLiveryRenderer} from './livery-renderer.js?v=033';
 import {LIVERY_CATALOG,liveryAsset} from './livery-system.js?v=033';
-import {OffroadVehicle,CAR_CONFIG,rotate} from './physics.js?v=036';
-import {EngineAudio} from './engine-audio.js?v=034';
+import {OffroadVehicle,CAR_CONFIG,rotate} from './physics.js?v=037';
+import {EngineAudio} from './engine-audio.js?v=037';
 const canvas=document.querySelector('canvas'),gl=canvas.getContext('webgl',{antialias:true,alpha:false});if(!gl){document.querySelector('#error').hidden=false;document.querySelector('#error').textContent='WebGL недоступен. Открой сайт в Safari или Chrome.';throw Error('WebGL unavailable');}
 function shader(type,src){const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(s));return s;}
 const fragmentPrecision=gl.getShaderPrecisionFormat?.(gl.FRAGMENT_SHADER,gl.HIGH_FLOAT)?.precision>0?'highp':'mediump';

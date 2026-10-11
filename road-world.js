@@ -41,8 +41,30 @@ export const OFFROAD_GROUPS=[
  ['ROCK_CRAWL','MOUNTAIN_PASS','EXIT'],
  ['SIDE_SLOPE','PEAT_BOG','EROSION_GULLY','EXIT'],
  ['CHESS_AXLE','MOUNTAIN_PASS','PEAT_BOG','EXIT'],
- ['MUD_CLIMB','PEAT_BOG','SIDE_SLOPE','EXIT']
+ ['MUD_CLIMB','PEAT_BOG','SIDE_SLOPE','EXIT'],
+ ['PEAT_BOG','SIDE_SLOPE','CHESS_AXLE','EXIT'],
+ ['MOUNTAIN_PASS','PEAT_BOG','EROSION_GULLY','EXIT'],
+ ['FOREST_FORD','PEAT_BOG','ROCK_STEPS','EXIT'],
+ ['CROSS_AXLE','PEAT_BOG','MUD_CLIMB','EXIT'],
+ ['ROCK_CRAWL','EROSION_GULLY','PEAT_BOG','EXIT']
 ];
+// Layered terrain recipes: two different threats can occupy one single section.
+const OFFROAD_COMBOS={
+ PEAT_BOG:[['BANK','WASHOUT'],['BANK','CHESS'],['HILL','WASHOUT'],['BANK','WASHOUT','CHESS'],['ROCKS','WASHOUT'],['HILL','BANK'],['CHESS','ROCKS']],
+ CHESS_AXLE:[['BANK','PEAT'],['HILL','PEAT'],['WASHOUT','ROCKS'],['BANK','WASHOUT'],['PEAT','RUTS']],
+ MOUNTAIN_PASS:[['BANK','PEAT'],['ROCKS','RUTS'],['WASHOUT','PEAT'],['BANK','WASHOUT'],['PEAT','CHESS']],
+ SIDE_SLOPE:[['PEAT','ROCKS'],['CHESS','PEAT'],['RUTS','ROCKS'],['CHESS','RUTS']],
+ EROSION_GULLY:[['BANK','PEAT'],['ROCKS','RUTS'],['HILL','CHESS'],['PEAT','ROCKS']],
+ MUD_CLIMB:[['PEAT','ROCKS'],['CHESS','BANK'],['RUTS','PEAT'],['ROCKS','CHESS']],
+ ROCK_CRAWL:[['WASHOUT','PEAT'],['BANK','RUTS'],['CHESS','PEAT'],['WASHOUT','RUTS']],
+ ROCK_STEPS:[['WASHOUT','PEAT'],['CHESS','RUTS'],['BANK','WASHOUT']],
+ RUT_MAZE:[['BANK','PEAT'],['ROCKS','CHESS'],['PEAT','WASHOUT']],
+ DEEP_MUD:[['BANK','WASHOUT'],['CHESS','RUTS'],['PEAT','ROCKS']],
+ RUT_GAUNTLET:[['WASHOUT','PEAT'],['BANK','CHESS'],['ROCKS','PEAT']],
+ FOREST_FORD:[['BANK','RUTS'],['ROCKS','RUTS'],['BANK','WASHOUT']],
+ TIGHT_TURNS:[['PEAT','WASHOUT'],['BANK','ROCKS']],
+ FALLEN_LOGS:[['PEAT','BANK'],['WASHOUT','RUTS']]
+};
 export const RALLY_GROUPS=[
  ['FAST_CURVE','SHORT_STRAIGHT','FAST_S_CURVE','JUMP','FAST_CURVE','BRAKING_ZONE','TECH_S_CURVE','APEX_TURN','EXIT'],
  ['FAST_S_CURVE','FAST_HILL','FAST_CURVE','EARTH_JUMP','BRAKING_ZONE','HAIRPIN','RUTS','TECHNICAL_HILL','EXIT'],
@@ -281,6 +303,65 @@ export class RoadWorld{
   if(type==='FALLEN_LOGS')for(const u of [.40,.57,.76])add('LOG_LARGE',u,(this.random()-.5)*.45,{radius:section.width/2+.6,longRadius:.55,height:.31+this.random()*.11});
   if(type==='MUD_CLIMB')for(const u of [.35,.50,.64,.78])add('MUD_MEDIUM',u,(this.random()-.5)*.7,{radius:1.65,longRadius:4,mudDepth:.41,height:-.050});
   if(type==='TIGHT_TURNS')for(const u of [.32,.72])add('SOFT_PATCH',u,(this.random()-.5)*1.8,{radius:1.55,longRadius:3});
+  // Different obstacles share the SAME section and elevation: a peat bog can be
+  // a hillside and contain a deep cross-axle rut; rock climbs can be wet and off-camber.
+  // The start is calmer, combinations become frequent after the first half-kilometre.
+  const recipes=OFFROAD_COMBOS[type],progress=clamp((startDistance-260)/1850,0,1);
+  const probability=.40+.51*progress;
+  if(recipes&&this.random()<probability){
+   const selected=recipes[Math.floor(this.random()*recipes.length)];
+   // Most difficult recipes may combine THREE effects; all have a workable line.
+   section.comboLayers=selected.slice();
+   const comboSign=this.random()<.5?-1:1,bankWidth=section.width/2+1.15;
+   for(const layer of selected){
+    if(layer==='BANK'){
+     // Slow, sustained sidehill; cap the bank if the base section already has one.
+     const hasBank=section.localFeatures.some(o=>o.shape==='bank');
+     const bankHeight=(hasBank?.24:.38)+challenge*.10;
+     add('SIDE_BANK',.50,0,{shape:'bank',height:comboSign*bankHeight,
+      radius:bankWidth,startU:.24,endU:.80});
+    }else if(layer==='WASHOUT'){
+     const u=.35+this.random()*.32;
+     add('DIAGONAL_GULLY',u,0,{height:-.34-.12*challenge,
+      radius:bankWidth,longRadius:2.15+this.random()*.45,
+      skew:comboSign*(1.1+this.random()*.22),mudDepth:.80});
+     add('GULLY_LIP',u-.028,comboSign*.76,{height:.17+.06*challenge,
+      radius:2.25,longRadius:1.4,skew:comboSign*1.16});
+    }else if(layer==='CHESS'){
+     const u=.37+this.random()*.16,side=comboSign;
+     for(const [at,dir] of [[u,side],[u+.15,-side]]){
+      add('CHESS_LIFT',at,dir*.86,{height:.29+.07*challenge,radius:.86,longRadius:1.55});
+      add('CHESS_HOLE',at+2.24/length,-dir*.86,
+       {height:-.33-.09*challenge,radius:.97,longRadius:1.68,mudDepth:.80});
+     }
+    }else if(layer==='HILL'){
+     // Only add a second ascent if this section has no existing grade.
+     if(!section.hill&&!section.mountainPass)section.hill={
+      category:'MIXED_CLIMB',angle:9+this.random()*5,
+      span:Math.min(49,length*.54),ramp:11,exitRamp:13,start:length*.21,sign:1};
+    }else if(layer==='PEAT'){
+     // Wet pockets on soil or mountain rock, NOT the river's open-water surface.
+     for(const [at,side] of [[.39,comboSign],[.67,-comboSign]])
+      add('PEAT_POOL',at,side*.63,{height:-.12-.05*challenge,
+       radius:1.55+this.random()*.27,longRadius:3.0+this.random()*.9,peatDepth:.77});
+    }else if(layer==='ROCKS'){
+     for(const [at,side] of [[.38,comboSign],[.61,-comboSign]])
+      add('ROCK_CRAWL_BOULDER',at,side*(.98+this.random()*.4),
+       {height:.28+.07*challenge,radius:.78,longRadius:.92});
+    }else if(layer==='RUTS'){
+     for(const side of [-1,1])add('MUD_STRIP',.5,side*.90,{
+      shape:'long_rut',startU:.26,endU:.77,radius:.41,longRadius:1,
+      height:-.24-.06*challenge,mudDepth:.67,
+      pathWander:.17,pathPhase:this.random()*6.28});
+    }
+   }
+   // The firmer shoulder is still available on bogs: move it to the end of the
+   // material priority list so newly added soft features cannot erase the bypass.
+   if(type==='PEAT_BOG'){
+    const dry=section.localFeatures.find(o=>o.kind==='SOFT_PATCH'&&o.shape==='long_rut'&&Math.abs(o.lateral)>2);
+    if(dry){section.localFeatures.splice(section.localFeatures.indexOf(dry),1);section.localFeatures.push(dry);}
+   }
+  }
  }
  const count=Math.ceil(length/step),samples=new Set(Array.from({length:count+1},(_,i)=>i*length/count));for(const o of section.localFeatures){if(o.shape==='long_rut'||o.shape==='river'||o.shape==='bank')continue;for(let d=-o.longRadius*OBSTACLE_CONFIG.detailRadius;d<=o.longRadius*OBSTACLE_CONFIG.detailRadius;d+=(o.shape==='log'?OBSTACLE_CONFIG.logSamplingStep:['ROCK_STEP','ROCK_CRAWL_BOULDER','CROSS_AXLE'].includes(o.kind)?.55:['DIAGONAL_GULLY','GULLY_LIP'].includes(o.kind)?.56:o.surfaceType&&o.surfaceType!=='ROCK'?OBSTACLE_CONFIG.surfaceSamplingStep:OBSTACLE_CONFIG.samplingStep))samples.add(clamp(o.u*length+d,0,length));}const distances=[...samples].sort((a,b)=>a-b).filter((d,i,all)=>!i||d-all[i-1]>.005);let x=entry.x,z=entry.z,lastDistance=0;
  const heading=u=>entry.yaw+turn*smooth(u)+(['FAST_S_CURVE','TECH_S_CURVE','TIGHT_TURNS'].includes(type)?sign*Math.min(type==='TIGHT_TURNS'?.86:type==='TECH_S_CURVE'?.65:.38,1.38-Math.abs(entry.yaw-Math.PI))*Math.sin(2*Math.PI*u)**3:0);

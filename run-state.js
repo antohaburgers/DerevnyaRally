@@ -1,6 +1,6 @@
 import {MechanicalDamage} from './mechanical.js?v=051';
 import {ExpeditionSystems} from './expedition-systems.js?v=055';
-import {rotate} from './physics.js?v=051';
+import {rotate} from './physics.js?v=055';
 export const RUN_CONFIG={bestKey:'niva3d.bestMeters.v1',hp:100,fuel:100,fuelConsumptionMultiplier:1.15,fuelIdle:.006,fuelThrottle:.085,fuelRPM:.026,fuelLoad:.020,lowConsumption:1.10,repair:25,refuel:25,impactThreshold:1,impactExponent:1.65,impactScale:.20,impactMax:75,hitCooldown:.35,landingThreshold:4.5,landingScale:2,landingDamageMultiplier:.70,slideRate:.08,slideSpeedRate:.025,maxSlideSpeed:15,saveInterval:2};
 export const DAMAGE_EVENTS=['FARMER_HIT','VILLAGE_PROP_HIT','COW_HIT','TREE_HIT','HOUSE_HIT','TRAFFIC_HIT','FENCE_HIT','SIGN_HIT','HARD_LANDING','ROLLOVER_IMPACT','ROOF_SLIDE'];
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));

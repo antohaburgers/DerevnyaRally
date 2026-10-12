@@ -206,7 +206,7 @@ function frame(now){
  if(!renderer||!started)return;
  const dt=Math.min(.043,Math.max(.001,(now-last)/1000||.016));last=now;
  if(!paused&&!document.hidden&&!finish)updatePhysics(dt);
- if(!$('#map-panel').style.display||$('#map-panel').style.display==='none')renderer.frame(visual,camera());
+ if(!$('#map-panel').style.display||$('#map-panel').style.display==='none')renderer.frame(visual,camera(),map.delivered,now/1000);
  if(engine)engine.update(vehicle.state,vehicle.wheels);
  if(frameCount++%6===0){updateUI();drawMinimap();}
 }

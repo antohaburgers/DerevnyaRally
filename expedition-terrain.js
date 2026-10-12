@@ -14,7 +14,7 @@ export class ExpeditionTerrain {
   }
  }
  roadPoint(road,s){let i=1;while(i<road.path.length-1&&road.path[i].s<s)i++;const a=road.path[i-1],b=road.path[i],u=clamp((s-a.s)/(b.s-a.s||1),0,1);return{x:a.x+(b.x-a.x)*u,z:a.z+(b.z-a.z)*u,yaw:Math.atan2(b.x-a.x,b.z-a.z)};}
- clear(x,z){return this.map.bounds(x,z)&&Math.abs(z-this.map.river(x).center)>this.map.river(x).halfWidth+45&&!this.map.landmarks.some(p=>Math.hypot(p.x-x,p.z-z)<90);}
+ clear(x,z){return this.map.bounds(x,z)&&Math.abs(z-this.map.river(x).center)>this.map.river(x).halfWidth+45&&!this.map.landmarks.some(p=>Math.hypot(p.x-x,p.z-z)<(p.inForest?15:90));}
  recipe(stage,x,z,yaw,difficulty,r,owner){const features=[],c=Math.cos(yaw),sn=Math.sin(yaw),strength=.60+difficulty*.65;
   const add=(kind,along,lateral,extra={})=>{const settings=OBSTACLE_CONFIG.types[kind],f={...settings,surfaceType:kind.startsWith('LOG')?'DIRT':settings.surfaceType,kind,x:x+sn*along+c*lateral,z:z+c*along-sn*lateral,yaw,u:0,lateral:0,owner,id:owner+':'+features.length,height:settings.height*strength,...extra};
    if(f.shape==='bank'){f.startU=-.38;f.endU=.38;f.longRadius=14;}

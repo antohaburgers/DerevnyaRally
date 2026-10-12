@@ -1,4 +1,4 @@
-import {ExpeditionTerrain} from './expedition-terrain.js?v=060';
+import {ExpeditionTerrain} from './expedition-terrain.js?v=061';
 // Finite, deterministic 2D world planner for the expedition mode.
 // No WebGL or DOM dependencies; the existing 3D renderer will consume active tiles.
 export const EXPEDITION_MAP_CONFIG = Object.freeze({
@@ -168,6 +168,18 @@ export class ExpeditionMap {
   generateLandmarks() {
     const p=(id,kind,node,label,upgrade=null)=>({id,kind,label,upgrade,...{x:this.nodes[node].x,z:this.nodes[node].z,nodeId:node}}),n=this.poiNodes;
     this.landmarks=[p('start','depot',n.start,'СКЛАД ПИВА'),p('tires','upgrade',n.tires,'ШИНОМОНТАЖ','tires'),p('winch','upgrade',n.winch,'ЛЕСОПИЛКА','winch'),p('suspension','upgrade',n.suspension,'УСИЛЕННАЯ ПОДВЕСКА','suspension'),p('snorkel','upgrade',n.snorkel,'СТАРЫЙ ГАРАЖ','snorkel'),p('repair','service',n.repair,'РЕМОНТНАЯ БАЗА'),p('fuel','service',n.fuel,'ЗАПРАВКА'),p('village1','village',n.v1,'МАЛЫЕ ПЕНЬКИ'),p('village2','village',n.v2,'ГЛУХОМАНЬ'),p('mill','service',n.mill,'ЛЕСНАЯ МАСТЕРСКАЯ'),p('goal','delivery',n.goal,'ДЕРЕВНЯ БУХАЛОВО')];
+    const random=rng(this.seed^0x61ca5e);
+    const forest=(id,upgrade,nodeId,label)=>{
+      const anchor=this.nodes[nodeId];let chosen=null;
+      for(let i=0;i<100;i++){const angle=random()*Math.PI*2,radius=95+random()*130,x=anchor.x+Math.cos(angle)*radius,z=clamp(anchor.z+Math.sin(angle)*radius,660,2700),near=this.roadAt(x,z);
+        const clearOfRoad=this.roads.every(road=>road.path.slice(1).every((b,j)=>pointSegment(x,z,road.path[j],b).distance>35));
+        if(this.bounds(x,z)&&this.riverDepth(x,z)===0&&clearOfRoad&&(!near||near.distance>35)&&this.landmarks.every(p=>Math.hypot(p.x-x,p.z-z)>55)){chosen={id,kind:'upgrade',label,upgrade,x,z,nodeId,inForest:true};break;}}
+      if(!chosen)throw Error('Cannot place forest upgrade '+id+' for seed '+this.seed);
+      return chosen;
+    };
+    // Forest caches have no automatic road or building placed under them.
+    const snorkel=forest('snorkel','snorkel',n.snorkel,'ШНОРКЕЛЬ В ЛЕСУ');this.landmarks=this.landmarks.filter(p=>p.id!=='snorkel');this.landmarks.push(snorkel);
+    this.landmarks.push(forest('rearLock','rearLock',n.suspension,'ЗАДНЯЯ БЛОКИРОВКА'),forest('frontLock','frontLock',n.winch,'ПЕРЕДНЯЯ БЛОКИРОВКА'));
   }
 
   // 2D spatial search: nearby road segments only, not all roads on the map.
@@ -199,6 +211,7 @@ export class ExpeditionMap {
   }
 
   biomeAt(x, z) {
+    if(this.landmarks?.some(p=>p.inForest&&Math.hypot(x-p.x,z-p.z)<75))return 'FOREST';
     if (Math.hypot(x - this.start.x, z - this.start.z) < 145 ||
         Math.hypot(x - this.goal.x, z - this.goal.z) < 190)
       return 'VILLAGE';

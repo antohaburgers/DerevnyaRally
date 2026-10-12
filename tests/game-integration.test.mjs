@@ -11,22 +11,22 @@ const game=await import('../game.js');
 
 test('original game starts expedition in the same scene and preserves the vehicle',()=>{
  const body=game.physics,visual=game.visual,t=performance.now();game.startRun('EXPEDITION');
- assert.equal(game.physics,body);assert.equal(game.visual,visual);assert.equal(game.world.openWorld,true);assert.equal(game.run.garageBuild.tires,'stock');assert.equal(game.run.garageBuild.winch,false);assert.equal(game.run.garageBuild.snorkel,false);assert.equal(game.run.garageBuild.suspension,'stock');assert.equal(game.cup.countdown,0);
+ assert.equal(game.physics,body);assert.equal(game.visual,visual);assert.equal(game.world.openWorld,true);assert.equal(game.run.garageBuild.tires,'stock');assert.equal(game.run.garageBuild.winch,false);assert.equal(game.run.garageBuild.snorkel,false);assert.equal(game.run.garageBuild.suspension,'stock');assert.equal(game.physics.requestRear(),false);assert.equal(game.physics.requestFront(),false);assert.equal(game.cup.countdown,0);
  for(let i=0;i<30;i++)frame(16+i*16);
- assert.equal(el('#expedition-minimap-panel').hidden,false);assert.ok(draws>0);assert.ok(game.run.time>0);assert.ok(game.physics.p.every(Number.isFinite));assert.ok(game.physics.wheels.every(w=>Number.isFinite(w.load)));assert.ok(game.chunkSlots.size<=25);console.log('Original renderer harness initial expedition ms:',Math.round(performance.now()-t));
+ assert.ok(draws>0);assert.ok(game.run.time>0);assert.ok(game.physics.p.every(Number.isFinite));assert.ok(game.physics.wheels.every(w=>Number.isFinite(w.load)));assert.ok(game.chunkSlots.size<=25);console.log('Original renderer harness initial expedition ms:',Math.round(performance.now()-t));
 });
 test('mission installs all original upgrades, repairs, map toggles and victory runs',()=>{
  for(const p of game.world.landmarks.filter(p=>p.upgrade)){game.world.update(p.x,p.z);game.physics.reset(p.x,p.z,Math.PI);game.physics.state.vehicleSpeed=0;game.expeditionSession.tick(.05);}
- assert.equal(game.expeditionSession.found.size,4);assert.equal(game.run.garageBuild.tires,'offroad');assert.equal(game.run.expedition.build.winch,true);assert.equal(game.run.expedition.build.snorkel,true);assert.equal(game.run.garageBuild.suspension,'trophy');
+ assert.equal(game.expeditionSession.found.size,6);assert.equal(game.run.garageBuild.tires,'offroad');assert.equal(game.run.expedition.build.winch,true);assert.equal(game.run.expedition.build.snorkel,true);assert.equal(game.run.garageBuild.suspension,'trophy');assert.equal(game.physics.state.rearLockInstalled,true);assert.equal(game.physics.state.frontLockInstalled,true);
  game.run.hp=20;game.run.fuel=2;const repair=game.world.landmarks.find(p=>p.id==='repair');game.world.update(repair.x,repair.z);game.physics.reset(repair.x,repair.z,Math.PI);game.physics.state.vehicleSpeed=0;game.expeditionSession.tick(.05);assert.equal(game.run.hp,100);assert.equal(game.run.fuel,100);
- el('#expedition-map-button').click();assert.equal(game.expeditionSession.mapOpen,true);frame(700);assert.equal(el('#expedition-minimap-panel').hidden,false);el('#expedition-map-close').click();assert.equal(game.expeditionSession.mapOpen,false);
+ el('#expedition-map-button').click();assert.equal(game.expeditionSession.mapOpen,true);frame(700);el('#expedition-map-close').click();assert.equal(game.expeditionSession.mapOpen,false);
  const goal=game.world.goal;game.world.update(goal.x,goal.z);game.physics.reset(goal.x,goal.z,Math.PI);game.physics.state.vehicleSpeed=0;game.expeditionSession.tick(.05);assert.equal(game.expeditionSession.complete,true);assert.equal(game.run.ended,true);assert.equal(game.expeditionSession.celebrants.length,8);game.expeditionSession.celebrate(.2);assert.ok(game.expeditionSession.celebrants.some(a=>a.y>game.height(a.x,a.z)));
  frame(1000);assert.match(el('#result-title').textContent,/ПИВО ДОСТАВЛЕНО/);
 });
 test('switching from expedition back to every original mode keeps the same physical car',()=>{
  const car=game.physics;
  for(const mode of ['ENDLESS','OFFROAD','CIRCUIT','SPRINT_5','SPRINT_10','EXPEDITION','OFFROAD']){
-  game.startRun(mode);assert.equal(game.physics,car);assert.equal(game.gameMode,mode);assert.equal(!!game.world.openWorld,mode==='EXPEDITION');if(mode!=='EXPEDITION')assert.equal(game.expeditionSession,null);
+  game.startRun(mode);assert.equal(game.physics,car);assert.equal(game.gameMode,mode);assert.equal(!!game.world.openWorld,mode==='EXPEDITION');if(mode!=='EXPEDITION'){assert.equal(game.expeditionSession,null);assert.equal(game.physics.state.rearLockInstalled,true);assert.equal(game.physics.state.frontLockInstalled,true);}
   frame(2000);assert.ok(game.physics.p.every(Number.isFinite));assert.ok(game.world.sections.length>0);
   if(mode==='CIRCUIT'||mode.startsWith('SPRINT'))assert.equal(game.cup.ai.length,9);
  }

@@ -1,4 +1,4 @@
-import {rotate} from './physics.js?v=060';
+import {rotate} from './physics.js?v=061';
 
 const clamp=(n,a,b)=>Math.min(b,Math.max(a,n));
 export const EXPEDITION_CONFIG={

@@ -1,4 +1,4 @@
-import {ExpeditionMap} from './expedition-map.js?v=060';
+import {ExpeditionMap} from './expedition-map.js?v=061';
 import {SURFACE_CONFIG,SURFACE_SETTINGS} from './surfaces.js?v=048';
 
 // Adapter for the ORIGINAL game's height / surface / section interfaces.
@@ -38,7 +38,7 @@ export class ExpeditionWorld {
   const put=(kind,x,z,extra={},visual=false)=>{if(x<x0||x>=x0+size||z<z0||z>=z0+size)return;const id=key+':'+kind+':'+x.toFixed(2)+':'+z.toFixed(2);(visual?section.visualDecor:section.decorations).push({id,kind,x,z,y:this.height(x,z),rotation:r()*Math.PI*2,broken:this.destroyed.has(id),...extra});};
   // Same tree, grass, hay, house, fence and scenery recipes as buildChunk().
   for(let i=0;i<95;i++){const x=x0+r()*size,z=z0+r()*size,biome=this.map.biomeAt(x,z),near=this.map.roadAt(x,z);if(!this.map.bounds(x,z)||this.map.riverDepth(x,z)>0)continue;
-   if(this.landmarks.some(p=>Math.hypot(p.x-x,p.z-z)<65))continue;
+   if(this.landmarks.some(p=>Math.hypot(p.x-x,p.z-z)<(p.inForest?5:65)))continue;
    const route=this.map.routeProfile(near);const density=biome==='FOREST'?.88:biome==='BOG'?.30:.09;
    if(near&&near.distance<route.width/2+(route.cleared?2.4:.7))continue;
    if(r()<density)put('tree',x,z,{scale:3.3+r()*4.3,radius:.13+r()*.22,category:r()<.3?'SMALL':'MEDIUM',variant:Math.floor(r()*3)});
@@ -46,7 +46,7 @@ export class ExpeditionWorld {
    else if(r()<.4)put('scrub',x,z,{scale:.6+r(),variant:0},true);
   }
   for(let i=0;i<85;i++){const x=x0+r()*size,z=z0+r()*size,near=this.map.roadAt(x,z);if(this.map.riverDepth(x,z)>0)continue;if(near&&near.distance<this.map.routeProfile(near).width/2&&this.map.routeProfile(near).cleared)continue;put('grass',x,z,{scale:.8+r(),variant:this.map.biomeAt(x,z)==='FIELD'?1:0},true);}
-  for(const item of this.landmarks){if(Math.hypot(item.x-center.x,item.z-center.z)>200)continue;
+  for(const item of this.landmarks){if(item.inForest)continue;if(Math.hypot(item.x-center.x,item.z-center.z)>200)continue;
    const village=['village','delivery','depot'].includes(item.kind),count=village?8:2;
    for(let i=0;i<count;i++){const side=i%2?1:-1,x=item.x+side*(26+Math.floor(i/4)*28),z=item.z+(Math.floor(i/2)-1.5)*30;
     const path=this.map.roadAt(x,z);if(path&&path.distance<path.road.width/2+6)continue;

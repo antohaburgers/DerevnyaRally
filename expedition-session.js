@@ -1,10 +1,10 @@
 import {STOCK_BUILD,suspensionConfig} from './garage.js?v=055';
-import {CAR_CONFIG,rotate} from './physics.js?v=060';
+import {CAR_CONFIG,rotate} from './physics.js?v=061';
 import {orientation} from './run-state.js?v=060';
-const NAMES={tires:'ГРЯЗЕВЫЕ ШИНЫ',winch:'ЛЕБЁДКА',suspension:'УСИЛЕННАЯ ПОДВЕСКА',snorkel:'ШНОРКЕЛЬ'};
+const NAMES={tires:'ГРЯЗЕВЫЕ ШИНЫ',winch:'ЛЕБЁДКА',suspension:'УСИЛЕННАЯ ПОДВЕСКА',snorkel:'ШНОРКЕЛЬ',rearLock:'ЗАДНЯЯ БЛОКИРОВКА',frontLock:'ПЕРЕДНЯЯ БЛОКИРОВКА'};
 export class ExpeditionSession {
- constructor(world,run,body,actors){this.world=world;this.run=run;this.body=body;this.actors=actors;this.found=new Set();this.cargo={crates:12,condition:100,mass:0};this.winchUses=0;this.serviceTimes=new Map();this.complete=false;this.celebrants=[];this.mapOpen=false;this.mapElapsed=0;this.checkpoint={...world.start,yaw:world.map.roadAt(world.start.x,world.start.z)?.yaw||Math.PI};this.celebrationTime=0;this.wasPulling=false;}
- install(upgrade){const build=this.run.garageBuild;if(upgrade==='tires')build.tires='offroad';else if(upgrade==='suspension')build.suspension='trophy';else build[upgrade]=true;
+ constructor(world,run,body,actors){this.world=world;this.run=run;this.body=body;this.actors=actors;this.found=new Set();this.cargo={crates:12,condition:100,mass:0};this.winchUses=0;this.serviceTimes=new Map();this.complete=false;this.celebrants=[];this.mapOpen=false;this.mapElapsed=0;this.checkpoint={...world.start,yaw:world.map.roadAt(world.start.x,world.start.z)?.yaw||Math.PI};this.celebrationTime=0;this.wasPulling=false;body.state.rearLockInstalled=false;body.state.frontLockInstalled=false;body.state.rearLocked=body.state.frontLocked=false;body.state.pendingRear=body.state.pendingFront=null;}
+ install(upgrade){const build=this.run.garageBuild;if(upgrade==='rearLock')this.body.state.rearLockInstalled=true;if(upgrade==='frontLock')this.body.state.frontLockInstalled=true;if(upgrade==='tires')build.tires='offroad';else if(upgrade==='suspension')build.suspension='trophy';else build[upgrade]=true;
   this.body.c=suspensionConfig({...CAR_CONFIG,mapLimit:Infinity},build);this.body.state.offroadTires=build.tires==='offroad';this.run.mechanical.build=build;this.run.expedition.build=build;this.run.expedition.apply();this.run.applyEngine(this.body);this.found.add(upgrade);this.world.map.collected.add(upgrade);this.run.notify('НАЙДЕНО: '+NAMES[upgrade],4);this.run.feedback.emit('REPAIR_PICKUP',{amount:0});
  }
  tick(dt){if(this.complete)return;const b=this.body,r=this.run,w=this.world,x=b.p[0],z=b.p[2],speed=Math.abs(b.state.vehicleSpeed||0),s=w.surface(x,z);
@@ -31,11 +31,19 @@ export class ExpeditionSession {
   for(let i=0;i<8;i++){const angle=i*Math.PI/4,x=w.goal.x+Math.sin(angle)*13,z=w.goal.z+Math.cos(angle)*13;this.celebrants.push({x,z,homeX:x,homeZ:z,y:w.height(x,z),rotation:angle+Math.PI,phase:i,age:0,active:true,scale:1,color:i%2?[.58,.40,.27]:[.34,.46,.53]});}
  }
  celebrate(dt){if(!this.complete)return;this.celebrationTime+=dt;for(const a of this.celebrants){a.age+=dt;const t=Math.min(1,this.celebrationTime/3),dx=this.body.p[0]-a.homeX,dz=this.body.p[2]-a.homeZ;a.x=a.homeX+dx*t*.50;a.z=a.homeZ+dz*t*.50;a.y=this.world.height(a.x,a.z)+Math.max(0,Math.sin(a.age*5+a.phase))*.38;}}
+ navigation(yaw){
+  const x=this.body.p[0],z=this.body.p[2];let nearest=null,best=Infinity;
+  for(const p of this.world.landmarks){if(p.upgrade&&this.found.has(p.upgrade))continue;if(!p.upgrade&&p.kind!=='service'&&p.kind!=='delivery')continue;
+   const dx=p.x-x,dz=p.z-z,d=Math.hypot(dx,dz),angle=Math.atan2(Math.sin(Math.atan2(dx,dz)-yaw),Math.cos(Math.atan2(dx,dz)-yaw));
+   if(Math.abs(angle)>.36&&d>20)continue;if(d<best){best=d;nearest={point:p,distance:d};}
+  }
+  return nearest?`${nearest.point.upgrade?NAMES[nearest.point.upgrade]:nearest.point.label} · ${Math.round(nearest.distance)} М`:'';
+ }
  rescueTarget(){const p=this.checkpoint;return {section:{recoveryPoint:p},u:0};}
- get summary(){const r=this.run;return `ТЮНИНГ ${this.found.size}/4 · ПОВРЕЖДЕНИЯ ${r.stats.collisions+r.stats.hardLandings} · ПЕРЕВОРОТЫ ${r.stats.rollovers} · ЛЕБЁДКА ${this.winchUses} · ГРУЗ ${this.cargo.crates} ЯЩ. / ${this.cargo.condition}%`;}
+ get summary(){const r=this.run;return `ТЮНИНГ ${this.found.size}/6 · ПОВРЕЖДЕНИЯ ${r.stats.collisions+r.stats.hardLandings} · ПЕРЕВОРОТЫ ${r.stats.rollovers} · ЛЕБЁДКА ${this.winchUses} · ГРУЗ ${this.cargo.crates} ЯЩ. / ${this.cargo.condition}%`;}
 }
 
-// Permanent overview and enlarged map share one cached cartographic background.
+// Manually opened map uses a cached cartographic background.
 const mapBackgrounds=new WeakMap();
 const MARKERS={tires:'1 MT',winch:'2 ЛБ',suspension:'3 ПД',snorkel:'4 ШН'};
 export function drawExpeditionMap(canvas,session,{mini=false}={}){

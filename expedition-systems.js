@@ -2,7 +2,7 @@ import {rotate} from './physics.js?v=055';
 
 const clamp=(n,a,b)=>Math.min(b,Math.max(a,n));
 export const EXPEDITION_CONFIG={
- winchRange:23,winchMinimum:2.1,winchSpeed:1.45,winchMaxPull:7600,winchSnapForce:9800,winchHeatRate:.24,winchCoolRate:.10,
+ winchRange:23,winchMinimum:2.1,winchSpeed:1.45,winchMaxPull:7600,winchSnapForce:7250,winchHeatRate:.24,winchCoolRate:.10,
  pressureMin:.8,pressureMax:2.2,pressureStep:.2,deepFordIntake:.49,snorkelIntake:.87,
  grimeRate:.034,scarDamage:14
 };
@@ -11,9 +11,9 @@ export const TYRE_PRESSURES=Object.freeze({road:2.2,trail:1.5,soft:.8});
 export class ExpeditionSystems{
  constructor(feedback){this.feedback=feedback;this.reset();}
  reset(build={}){
-  this.build=build||{};this.pressure=TYRE_PRESSURES[this.build.tyrePressure]??1.5;
+  this.build=build||{};this.pressure=TYRE_PRESSURES[this.build.tyrePressure]??2.2;
   this.tyres=Array.from({length:4},()=>({punctured:false,unseated:false,wear:0}));
-  this.winch={tree:null,length:0,pulling:false,heat:0,broken:false,load:0};
+  this.winch={tree:null,length:0,pulling:false,heat:0,broken:false,load:0,overload:0};
   this.engine={stalled:false,wetTime:0,restartCooldown:0};
   this.grime=0;this.scratches=0;this.damageMarks=0;
   this.lastPuncture=0;this.lastBead=0;this.lastWater=0;
@@ -46,7 +46,7 @@ export class ExpeditionSystems{
    best=distance;candidate=tree;
   }
   if(!candidate){this.feedback?.emit('WINCH_NO_ANCHOR');return false;}
-  this.winch.tree=candidate;this.winch.length=best+.1;this.winch.pulling=false;this.winch.load=0;
+  this.winch.tree=candidate;this.winch.length=best+.1;this.winch.pulling=false;this.winch.load=0;this.winch.overload=0;
   this.apply();this.feedback?.emit('WINCH_ATTACHED',{distance:best});return true;
  }
  release(){this.winch.tree=null;this.winch.pulling=false;this.winch.load=0;this.apply();}
@@ -96,7 +96,8 @@ export class ExpeditionSystems{
    else{
     winch.length=Math.max(1.2,winch.length-EXPEDITION_CONFIG.winchSpeed*dt);
     winch.heat=Math.min(1.02,winch.heat+dt*(EXPEDITION_CONFIG.winchHeatRate+.14*Math.min(1,(s.winchLoad||0)/EXPEDITION_CONFIG.winchMaxPull)));
-    if((s.winchLoad||0)>EXPEDITION_CONFIG.winchSnapForce&&this.random()<dt*.9){
+    winch.overload=(s.winchLoad||0)>EXPEDITION_CONFIG.winchSnapForce?winch.overload+dt:Math.max(0,winch.overload-dt*.65);
+    if(winch.overload>3.2){
      winch.broken=true;this.release();this.feedback?.emit('WINCH_SNAPPED');
     }
    }
@@ -121,7 +122,7 @@ export class ExpeditionSystems{
  }
  wash(){this.grime=0;this.scratches=0;this.damageMarks=0;this.feedback?.emit('CAR_WASHED');}
  repair(){for(const t of this.tyres){t.punctured=false;t.unseated=false;t.wear=0;}
-  this.winch.broken=false;this.winch.heat=0;this.winch.pulling=false;this.release();
+  this.winch.broken=false;this.winch.heat=0;this.winch.pulling=false;this.winch.overload=0;this.release();
   this.engine.stalled=false;this.engine.wetTime=0;this.engine.restartCooldown=0;
   this.scratches=0;this.damageMarks=0;this.apply();
  }

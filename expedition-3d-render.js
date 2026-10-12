@@ -125,7 +125,7 @@ export class ExpeditionRenderer{
   this.uVP=gl.getUniformLocation(prog,'vp');this.uModel=gl.getUniformLocation(prog,'model');this.uEye=gl.getUniformLocation(prog,'eye');
   [this.p,this.n,this.c].forEach(k=>gl.enableVertexAttribArray(k));
   gl.enable(gl.DEPTH_TEST);gl.clearColor(.69,.80,.77,1);
-  this.chunks=new Map();this.body=this.upload(nivaGeometry());this.tyre=this.upload(tyreGeometry());this.farmer=this.upload(villagerGeometry());
+  this.chunks=new Map();this.deliveryTime=null;this.body=this.upload(nivaGeometry());this.tyre=this.upload(tyreGeometry());this.farmer=this.upload(villagerGeometry());
  }
  upload(data){const gl=this.gl,b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(data),gl.STATIC_DRAW);return{b,count:data.length/9};}
  kit(build){this.gl.deleteBuffer(this.body.b);this.gl.deleteBuffer(this.tyre.b);this.body=this.upload(nivaGeometry(build));this.tyre=this.upload(tyreGeometry(build.tires));}
@@ -148,6 +148,8 @@ export class ExpeditionRenderer{
   for(const mesh of this.chunks.values())this.mesh(mesh,I);
   this.mesh(this.body,visual.matrix);
   for(const w of visual.wheels)if(!w.detached)this.mesh(this.tyre,matPose(w.position[0],w.position[1],w.position[2],visual.yaw+(w.front?w.steer:0)));
-  if(delivered){for(let i=0;i<14;i++){const a=i*Math.PI*2/14+Math.sin(t*.25)*.1;const r=10+i%3*2;const x=this.map.goal.x+Math.cos(a)*r,z=this.map.goal.z+Math.sin(a)*r;this.mesh(this.farmer,matPose(x,this.map.terrainHeight(x,z)+Math.abs(Math.sin(t*5+i))*.30,z,-a));}}
+  if(delivered){this.deliveryTime??=t;const progress=clamp((t-this.deliveryTime)/2.5,0,1);for(let i=0;i<14;i++){const a=i*Math.PI*2/14+Math.sin(t*.25)*.1;const r=25-15*progress+i%3*2;const x=this.map.goal.x+Math.cos(a)*r,z=this.map.goal.z+Math.sin(a)*r;this.mesh(this.farmer,matPose(x,this.map.terrainHeight(x,z)+Math.abs(Math.sin(t*5+i))*.30,z,-a));}}
  }
 }
+
+export {tileGeometry as buildExpeditionTileGeometry};

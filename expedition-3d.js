@@ -57,7 +57,7 @@ function reset(){
  if(!renderer)prepare();
  map.reset(Math.floor(Math.random()*2**32));Object.assign(kit,{tires:false,winch:false,snorkel:false});
  renderer.map=map;for(const g of renderer.chunks.values())renderer.gl.deleteBuffer(g.b);renderer.chunks.clear();
- renderer.kit(kit);renderer.sync();
+ renderer.kit(kit);renderer.deliveryTime=null;renderer.sync();
  vehicle.reset(map.start.x,map.start.z,map.roadAt(map.start.x,map.start.z).yaw);
  Object.assign(vehicle.state,{enginePowerFactor:1,engineRunning:true,transferRange:'H',centerLocked:false,rearLocked:false,frontLocked:false,tyrePressure:2.2,offroadTires:false});
  hp=100;fuel=100;wetTime=0;stalled=false;time=0;travel=0;finish=false;winchAnchor=null;lastSafe={x:map.start.x,z:map.start.z,yaw:vehicle.q[1]*2};

@@ -294,7 +294,8 @@ export class RoadWorld{
    add('SOFT_PATCH',.52,0,{...track,radius:.32,height:hill?.055:.075});
   }
   if(type==='FOREST_FORD'){
-   const depth=.46+this.random()*.12;
+   const deep=this.random()<.35,depth=deep?.68+this.random()*.12:.43+this.random()*.14;
+   section.deepFord=deep;
    // Riverbed always exists: on selected crossings 4–6 uneven boulders hide beneath the water.
    section.fordRocks=this.random()<.70;
    section.fordVariant=section.fordRocks?'ROCKY':'MUDDY';

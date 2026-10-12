@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {RoadWorld} from '../road-world.js';
 import {buildSprint,SPRINT_CONFIG} from '../sprint-world.js';
-import {GAME_MODE,isRaceMode,isOffroadSprint,offroadRivalBuild,RaceProgress,RACE_CONFIG} from '../race.js';
+import {GAME_MODE,isRaceMode,isOffroadSprint,offroadRivalBuild,trophyFordSurface,raceInput,RaceProgress,RACE_CONFIG} from '../race.js';
 
 test('offroad trophy sprint is a finite race with the original terrain generator',()=>{
  for(const [mode,length] of [[GAME_MODE.OFFROAD_SPRINT_5,5000],[GAME_MODE.OFFROAD_SPRINT_10,10000]]){
@@ -42,4 +42,26 @@ test('seeded rivals have reproducible and genuinely different offroad setups',()
   assert.ok(['road','trail','soft'].includes(rival.build.tyrePressure));
   assert.equal(typeof rival.locks.center,'boolean');
  }
+});
+
+test('trophy water assistance changes only submerged rival tyre contact',()=>{
+ const water={surfaceType:'WATER',waterDepth:.72,longitudinalGrip:.36,lateralGrip:.42,rollingResistance:.33};
+ const dry={...water,surfaceType:'DIRT',waterDepth:0};
+ const wet=trophyFordSurface(water,{tires:'stock'});
+ assert.ok(wet.longitudinalGrip>water.longitudinalGrip*1.5);
+ assert.ok(wet.rollingResistance<water.rollingResistance*.7);
+ assert.deepEqual(trophyFordSurface(dry,{tires:'stock'}),dry);
+ assert.equal(water.rollingResistance,.33);
+});
+test('ford keeps trophy AI in low range, driving ahead rather than reversing to escape',()=>{
+ const section={type:'FOREST_FORD',localFeatures:[],hill:null};
+ const world={offroadMode:true,finiteRace:true,
+  locate:()=>({s:100,yaw:0,section,width:7,lateral:0}),
+  atDistance:s=>({s,x:0,z:s,yaw:0,section,u:.5,width:7})};
+ const car={p:[0,0,100],v:[0,0,.1],q:[0,0,0,1],omega:[0,0,0],
+  wheels:[{waterDepth:.65,mudDepth:.1}],state:{transferRange:'L',turboInstalled:false,centerLocked:true},aiStuckTime:5};
+ const cmd=raceInput(car,world,1.2,[],.1);
+ assert.ok(cmd.drive>=.76);
+ assert.ok(cmd.drive>0);
+ assert.equal(car.state.transferRange,'L');
 });

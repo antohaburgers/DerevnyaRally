@@ -91,7 +91,7 @@ export class ExpeditionSystems{
   const s=body.state,w=body.wheels;
   const wet=Math.max(0,...w.map(x=>x.waterDepth||0));
   this.lastWater=wet;
-  const threshold=this.build?.snorkel?EXPEDITION_CONFIG.snorkelIntake:EXPEDITION_CONFIG.deepFordIntake;
+  const threshold=s.trophyFordAssist?Infinity:(this.build?.snorkel?EXPEDITION_CONFIG.snorkelIntake:EXPEDITION_CONFIG.deepFordIntake);
   if(wet>threshold&&Math.abs(s.vehicleSpeed||0)<55){
    this.engine.wetTime+=dt*(.8+(wet-threshold)*2);
    if(this.engine.wetTime>1.35&&!this.engine.stalled){

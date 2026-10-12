@@ -26,7 +26,7 @@ import {bindThrottle} from './controls.js?v=028';
 import {HoodCamera,CAMERA_CONFIG} from './cameras.js?v=028';
 import {RoadWorld,ROAD_CONFIG,asphaltBlend} from './road-world.js?v=043';
 import {VisualCar} from './visual-car.js?v=028';
-import {PAINTS,STOCK_BUILD,loadBuild,saveBuild,tireSurface,boostLevel} from './garage.js?v=033';
+import {PAINTS,STOCK_BUILD,SUSPENSION_KITS,SPRING_TUNES,suspensionConfig,loadBuild,saveBuild,tireSurface,boostLevel} from './garage.js?v=045';
 import {createLiveryRenderer} from './livery-renderer.js?v=033';
 import {LIVERY_CATALOG,liveryAsset} from './livery-system.js?v=033';
 import {OffroadVehicle,CAR_CONFIG,rotate} from './physics.js?v=042';
@@ -243,7 +243,7 @@ const raceRaw=npcGeometry('NIVA',{shell,cabin,roof,bonnet,glazing},true),raceMes
 const raceLODMeshes=[raceMeshes,...[1,2].map(lod=>Object.fromEntries(Object.entries(npcGeometry('NIVA',null,true,lod)).map(([key,data])=>[key,mesh(data.v,data.n)])))],aiWheelAxle=new Float32Array([0,.88,0,0,-.25,0,0,0,0,0,.88,0,0,0,0,1]);
 // Same GPU, same vehicle meshes, same live livery textures. No second WebGL context.
 const showroomPreview=document.querySelector('#garage-screen .garage-preview');
-let showroomAngle=-.70,showroomZoom=1,showroomIdle=0,showroomPointer=null;
+let showroomAngle=-.70,showroomZoom=1,showroomIdle=0,showroomPointer=null,showroomDisplayLift=0;
 const showroomWheels=Array.from({length:4},(_,i)=>({
  id:['FL','FR','RL','RR'][i],x:physics.wheels[i].x,z:physics.wheels[i].z,
  front:i<2,position:[0,CAR_CONFIG.wheelRadius,0],angle:0,steer:0,detached:false,visualSink:0
@@ -280,6 +280,8 @@ canvas.addEventListener('wheel',e=>{
  showroomIdle=4;e.preventDefault();
 },{passive:false});
 function renderShowroom(dt,rawDt){
+ const targetLift=(SUSPENSION_KITS[garageBuild.suspension]||SUSPENSION_KITS.stock).lift;
+ showroomDisplayLift+=(targetLift-showroomDisplayLift)*(1-Math.exp(-8*dt));
  if(!showroomPointer){
   const x=gamepad.state.lookX||0,y=gamepad.state.lookY||0;
   if(Math.abs(x)>.04||Math.abs(y)>.04){
@@ -312,7 +314,7 @@ function renderShowroom(dt,rawDt){
  const prevMatrix=visual.matrix,prevWheels=visual.wheels,prevQ=visual.q;
  try{
   const c=Math.cos(showroomAngle),s=Math.sin(showroomAngle);
-  visual.matrix=matrix(0,.10,0,1,1,1,showroomAngle);
+  visual.matrix=matrix(0,.10+showroomDisplayLift,0,1,1,1,showroomAngle);
   visual.q=[0,Math.sin(showroomAngle/2),0,Math.cos(showroomAngle/2)];
   for(let i=0;i<4;i++){
    const w=showroomWheels[i],x=w.x,z=w.z;
@@ -332,7 +334,7 @@ function drawDetachedWheels(){for(const d of [run,...(isRaceMode(gameMode)?cup.a
 const runHUD={hp:document.querySelector('#hp-value'),fuel:document.querySelector('#fuel-value'),hpBar:document.querySelector('#hp-bar'),fuelBar:document.querySelector('#fuel-bar'),best:document.querySelector('#best'),beer:document.querySelector('#beer'),toast:document.querySelector('#run-toast'),results:document.querySelector('#run-results'),resultDistance:document.querySelector('#result-distance'),resultBest:document.querySelector('#result-best'),stats:document.querySelector('#result-stats')};
 function updateRunHUD(){if(menuOpen){runHUD.results.hidden=true;return;}document.querySelector('#reset').hidden=run.ended;if(typeof menuUntil!=='undefined'&&!transmissionPanel.hidden&&run.time>menuUntil){transmissionPanel.hidden=true;toggle.setAttribute('aria-expanded','false');}const faults=document.querySelector('#mechanical-status');faults.textContent=run.mechanical.indicators;faults.hidden=!faults.textContent;runHUD.hp.textContent=Math.ceil(run.hp);runHUD.fuel.textContent=Math.ceil(run.fuel)+'%';runHUD.hpBar.style.width=run.hp+'%';runHUD.fuelBar.style.width=run.fuel+'%';runHUD.hpBar.classList.toggle('critical',run.hp<=25);runHUD.fuelBar.classList.toggle('critical',run.fuel<=20);runHUD.best.textContent=isRaceMode(gameMode)?'ДЕРЕВЕНСКИЙ КУБОК':(gameMode===GAME_MODE.OFFROAD?'OFFROAD BEST ':'BEST ')+(run.best/1000).toFixed(1)+' KM';runHUD.beer.hidden=!run.beer||run.ended;runHUD.toast.textContent=run.message||(run.fuel<=0&&!run.ended?'БЕНЗИН ЗАКОНЧИЛСЯ':'');runHUD.toast.hidden=!runHUD.toast.textContent;runHUD.results.hidden=!run.ended;document.querySelector('#result-primary-label').textContent=isRaceMode(gameMode)?'ПОЗИЦИЯ':'ПРОБЕГ';document.querySelector('#result-secondary-label').textContent=isRaceMode(gameMode)?'TOTAL TIME':'ЛУЧШИЙ';document.querySelector('#result-kicker').textContent=isRaceMode(gameMode)?'ДЕРЕВЕНСКИЙ КУБОК / v0.43':gameMode===GAME_MODE.OFFROAD?'БЕСКОНЕЧНОЕ БЕЗДОРОЖЬЕ / v0.43':'НИВА УСТАЛА / v0.43';document.querySelector('#result-title').textContent=isRaceMode(gameMode)?(cup.result?.dnf?'DNF · НИВА УСТАЛА':'ФИНИШ'):'ЗАЕЗД ОКОНЧЕН';if(run.ended&&isRaceMode(gameMode)){runHUD.resultDistance.textContent='ПОЗИЦИЯ '+(cup.result?.position||cup.position())+'/10';runHUD.resultBest.textContent=formatTime(cup.result?.time??cup.time);runHUD.stats.textContent=(world.finiteRace?(world.raceLength/1000)+' KM':'BEST LAP '+formatTime(cup.result?.bestLap))+' · ПОБЕДЫ '+cup.stats.wins+' · ГОНОК '+cup.stats.races;}else if(run.ended){runHUD.resultDistance.textContent=(run.distance/1000).toFixed(1)+' KM';runHUD.resultBest.textContent=(run.best/1000).toFixed(1)+' KM';const s=run.stats;runHUD.stats.textContent=`ДЕРЕВЬЯ ${s.trees} · ЗАБОРЫ ${s.fences} · ЗНАКИ ${s.signs} · ПИВО ${s.beers} · УДАРЫ ${s.collisions} · ПЕРЕВОРОТЫ ${s.rollovers} · ПРИЗЕМЛЕНИЯ ${s.hardLandings}`;}}
 function startRun(mode=gameMode){if(!Object.values(GAME_MODE).includes(mode))return false;restoreGarageCanvas();garageOpen=false;document.querySelector('#garage-screen').hidden=true;closeExit();clear();run.aborted=false;gameplayClock.reset();environmentClock.reset();gameMode=mode;offroadNoticeSection=-1;if(mode===GAME_MODE.ENDLESS||mode===GAME_MODE.OFFROAD){cameraMode='CHASE';orbit.yaw=0;orbit.elevation=CAMERA_CONFIG.chaseElevation;orbit.idle=0;cameraSnap=true;}menuOpen=false;document.body.classList?.remove('menu-open');document.querySelector('#main-menu').hidden=true;cup.clear();run.save();run.setMode(mode);run.garageBuild=isRaceMode(mode)?null:garageBuild;// Niva full-time 4x4 across all remaining modes.
-physics.c={...CAR_CONFIG,mapLimit:Infinity};
+physics.c=suspensionConfig({...CAR_CONFIG,mapLimit:Infinity},isRaceMode(mode)?STOCK_BUILD:garageBuild);
 for(const w of physics.wheels){w.x=(w.id.endsWith('L')?-1:1)*physics.c.track/2;w.z=(w.front?1:-1)*physics.c.wheelbase/2;}
 physics.state.offroadMode=mode===GAME_MODE.OFFROAD;physics.state.offroadTires=!!run.garageBuild&&garageBuild.tires==='offroad';run.randomFailures=mode===GAME_MODE.ENDLESS;physics.state.turboInstalled=!!run.garageBuild&&garageBuild.engine==='turbo';document.querySelector('#boost-hud').hidden=!physics.state.turboInstalled;feedback.intensity=isRaceMode(mode)?1:2.35;music.suspended=false;music.setPool('CIRCUIT_START',true);document.body.classList?.toggle('circuit-mode',isRaceMode(mode));raceDecor.clear();transmissionPanel.hidden=true;toggle.setAttribute('aria-expanded','false');menuUntil=0;const nextSeed=randomSeed(world.seed);environment.reset(nextSeed);rain.reset(nextSeed);world.offroadMode=mode===GAME_MODE.OFFROAD;if(gameMode===GAME_MODE.CIRCUIT)buildCircuit(world,nextSeed);else if(isRaceMode(gameMode))buildSprint(world,nextSeed,gameMode);else world.reset(nextSeed);animals.clear();farmers.clear();run.reset();checkpoints.reset();feedback.seed=world.seed;Object.assign(physics.state,{runEnded:false,engineRunning:true,enginePowerFactor:1,transferRange:'H',centerLocked:false,rearLocked:false,frontLocked:false,pendingRange:null,pendingCenter:null,pendingRear:null,pendingFront:null,hp:100,fuel:100});eventAudio.clear();resetToRoad(world.sections[0],18/world.sections[0].length);run.body=physics;run.mechanical.bind(physics,world.seed);run.applyEngine(physics);if(isRaceMode(gameMode)){cup.start();raceDecor.build();cup.decor=raceDecor;syncWorldMeshes();for(const ai of cup.ai)ai.feedback.onEvent(e=>{if(Math.hypot(ai.body.p[0]-physics.p[0],ai.body.p[2]-physics.p[2])<70)eventAudio.play(e);});visual.reset();hood.reset(visual);car.x=physics.p[0];car.y=physics.p[1];car.z=physics.p[2];car.a=visual.yaw;car.v=0;focus=[car.x,car.y+1.05,car.z];cameraSnap=true;}else cup.startSolo();labelLayout.reset();updateRunHUD();updateRaceHUD();}
 runHUD.beer.addEventListener('click',()=>{run.drink();updateRunHUD();});document.querySelector('#restart-run').addEventListener('click',()=>{if(run.ended)startRun();});feedback.onEvent(e=>{if(e.type==='RUN_END'||e.type==='CUP_END'){if(isRaceMode(gameMode))if(e.type==='RUN_END')cup.finish(true);music.finale();clear();updateRunHUD();}});document.addEventListener('visibilitychange',()=>{if(document.hidden)run.save();});
@@ -405,7 +407,13 @@ function paintGarageUI(){
  preview.querySelector('.garage-car-body').style.backgroundImage=asset?'url("'+asset+'")':'none';
  if(asset)bodyLivery.loadTexture(selected.id);
  const decal=document.querySelector('#garage-decal');decal.hidden=true;
- document.querySelector('#garage-summary').textContent=(garageBuild.tires==='offroad'?'ВНЕДОРОЖНАЯ РЕЗИНА':'ШОССЕЙНЫЕ ШИНЫ')+' · '+(garageBuild.engine==='turbo'?'ТУРБО':'СТОК');
+ const kit=SUSPENSION_KITS[garageBuild.suspension]||SUSPENSION_KITS.stock;
+ const tune=SPRING_TUNES[garageBuild.springTune]||SPRING_TUNES.standard;
+ const height=Math.round(kit.lift*1000),cfg=suspensionConfig(CAR_CONFIG,garageBuild);
+ const travel=Math.round((cfg.suspensionTravel.front.compression+cfg.suspensionTravel.front.droop)*1000);
+ const roll=tune.antiRoll<1?'БОЛЬШЕ КРЕН':tune.antiRoll>1?'МЕНЬШЕ КРЕН':'СТОКОВЫЙ КРЕН';
+ document.querySelector('#garage-suspension-specs').textContent='ЛИФТ +'+height+' ММ  ·  ХОД ПЕРЕДНЕЙ +'+travel+' ММ  ·  '+roll;
+ document.querySelector('#garage-summary').textContent=kit.label+' · '+tune.label+' · '+(garageBuild.tires==='offroad'?'MT':'СТОК ШИНЫ')+' · '+(garageBuild.engine==='turbo'?'ТУРБО':'АТМО');
 }
 garagePanel.addEventListener('click',e=>{const button=e.target.closest('[data-tune]');if(!button)return;const key=button.dataset.tune;if(!(key in STOCK_BUILD))return;garageBuild[key]=button.dataset.value||!garageBuild[key];garageBuild=saveBuild(localStore,garageBuild);paintGarageUI();});
 function cycleLivery(direction){

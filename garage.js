@@ -2,7 +2,7 @@ import {LIVERY_ASSETS} from './livery-system.js?v=033';
 // Persistent cosmetic and performance loadout. Wheel radius is intentionally unchanged.
 export const GARAGE_KEY='niva3d.garageBuild.v1';
 export const PAINTS={murena:[.20,.32,.30],white:[.86,.87,.80],black:[.12,.15,.16],blue:[.15,.33,.63],red:[.70,.17,.15],silver:[.59,.63,.64],sand:[.67,.59,.43],yellow:[.85,.63,.18]};
-export const STOCK_BUILD=Object.freeze({tires:'stock',engine:'stock',arches:false,rack:false,frontBumper:false,rearBumper:false,fogLights:false,snorkel:false,color:'murena',livery:'none',suspension:'stock',springTune:'standard'});
+export const STOCK_BUILD=Object.freeze({tires:'stock',engine:'stock',arches:false,rack:false,frontBumper:false,rearBumper:false,fogLights:false,snorkel:false,color:'murena',livery:'none',suspension:'stock',springTune:'standard',tyrePressure:'road',winch:false});
 // Height and damping presets are deliberately independent; existing saves remain compatible.
 export const SUSPENSION_KITS=Object.freeze({
  stock:{label:'СТОК',lift:0,extraCompression:0,extraDroop:0},
@@ -44,6 +44,8 @@ export function normalizeBuild(value){
  const b={...STOCK_BUILD},v=value&&typeof value==='object'?value:{};
  if(v.tires==='offroad')b.tires='offroad';
  if(v.engine==='turbo')b.engine='turbo';
+ if(['road','trail','soft'].includes(v.tyrePressure))b.tyrePressure=v.tyrePressure;
+ b.winch=v.winch===true;
  if(Object.hasOwn(SUSPENSION_KITS,v.suspension))b.suspension=v.suspension;
  if(Object.hasOwn(SPRING_TUNES,v.springTune))b.springTune=v.springTune;
  if(Object.prototype.hasOwnProperty.call(PAINTS,v.color))b.color=v.color;

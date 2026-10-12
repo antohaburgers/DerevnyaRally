@@ -37,7 +37,7 @@ function draw(){
  ctx.closePath();ctx.fillStyle='#3b86a5';ctx.fill();ctx.strokeStyle='#b1d8d4';ctx.lineWidth=Math.max(1,2*scale);ctx.stroke();
  for(const road of map.roads){
    path(road.path);ctx.lineJoin='round';ctx.lineCap='round';ctx.lineWidth=Math.max(1,road.width*scale+2);ctx.strokeStyle='#435342';ctx.stroke();
-   path(road.path);ctx.lineWidth=Math.max(1,road.width*scale);ctx.strokeStyle=road.difficulty>=3?'#896c4d':'#c5a47c';ctx.stroke();
+   path(road.path);ctx.lineWidth=Math.max(1,road.width*scale);ctx.strokeStyle={gravel:'#ead9b8',country:'#d4b58c',forest:'#a2957d',rutted:'#7b6250',muddy:'#625044',rocky:'#b6b4ac',ford:'#b7a184',bridge:'#ead4a9'}[road.surface]||'#d4b58c';ctx.stroke();
    if(road.kind==='bridge'||road.kind==='ford'||road.kind==='deep-ford'){const mid=road.path[1];if(scale>.075){ctx.fillStyle=road.kind==='bridge'?'#ead8a9':'#91c5c3';ctx.beginPath();ctx.arc(sx(mid.x),sy(mid.z),4,0,Math.PI*2);ctx.fill();}}
  }
  for(const p of map.landmarks){

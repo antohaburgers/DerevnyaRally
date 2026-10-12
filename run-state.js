@@ -8,13 +8,27 @@ export function collisionDamage(impulse,mass=1280){return clamp(RUN_CONFIG.impac
 export function fuelRate(state){const rpm=clamp((state.currentRPM-850)/5350,0,1),throttle=clamp(state.throttle||0,0,1);return(RUN_CONFIG.fuelIdle+RUN_CONFIG.fuelThrottle*throttle**2+RUN_CONFIG.fuelRPM*rpm+RUN_CONFIG.fuelLoad*clamp(state.load||0,0,1))*(state.transferRange==='L'?RUN_CONFIG.lowConsumption:1)*RUN_CONFIG.fuelConsumptionMultiplier;}
 export class RunState{
  constructor(feedback,storage){this.feedback=feedback;this.storage=storage;this.best=0;try{const value=Number(storage?.getItem(RUN_CONFIG.bestKey));if(Number.isFinite(value)&&value>=0&&value<1e9)this.best=value;}catch{}this.mechanical=new MechanicalDamage(feedback);this.unsubscribe=feedback.onEvent(e=>this.receive(e));this.reset();}
- reset(){this.mechanical.reset();this.hp=100;this.fuel=100;this.distance=0;this.beer=false;this.ended=false;this.time=0;this.cooldowns=new Map();this.messages=[];this.previousBest=this.best;this.recordShown=false;this.lastSave=0;this.lastSlide=-10;this.lastOrientation='NORMAL';this.orientation='NORMAL';this.body=null;this.damageImmuneUntil=0;this.lastImpactDamage=0;this.stats={trees:0,fences:0,signs:0,beers:0,collisions:0,rollovers:0,hardLandings:0};}
+ reset(){this.mechanical.reset();this.hp=100;this.fuel=100;this.distance=0;this.beer=false;this.ended=false;this.time=0;this.cooldowns=new Map();this.messages=[];this.previousBest=this.best;this.recordShown=false;this.lastSave=0;this.lastSlide=-10;this.lastOrientation='NORMAL';this.orientation='NORMAL';this.body=null;this.damageImmuneUntil=0;this.lastImpactDamage=0;this.stats={trees:0,fences:0,signs:0,beers:0,collisions:0,rollovers:0,hardLandings:0,brokenParts:0,brokenLocks:0};}
  notify(text,duration=2){this.messages.push({text,until:this.time+duration});if(this.messages.length>4)this.messages.shift();}
  get message(){this.messages=this.messages.filter(m=>m.until>this.time);return (this.messages.find(m=>m.text==='БАЛДЁЖ')||this.messages.at(-1))?.text||'';}
  bestFor(mode='ENDLESS'){const key=mode==='OFFROAD'?'niva3d.bestOffroadMeters.v1':RUN_CONFIG.bestKey;try{const value=Number(this.storage?.getItem(key));return Number.isFinite(value)&&value>=0&&value<1e9?value:0;}catch{return 0;}}
  setMode(mode){this.mode=mode;this.recordKey=mode==='OFFROAD'?'niva3d.bestOffroadMeters.v1':RUN_CONFIG.bestKey;this.best=this.bestFor(mode);}
  save(){try{this.storage?.setItem(this.recordKey||RUN_CONFIG.bestKey,String(this.best));}catch{}this.lastSave=this.time;}
- receive(e){if(this.ended)return;const failureMessages={FRONT_DRIVE_FAILURE:"ПЕРЕДНИЙ ПРИВОД СЛОМАН",REAR_DRIVE_FAILURE:"ЗАДНИЙ ПРИВОД СЛОМАН",WHEEL_DETACHED:"КОЛЕСО ОТОРВАНО · "+(e.wheel||"")};if(failureMessages[e.type]){const randomMessages={FRONT_DRIVE_FAILURE:'ОТКАЗ ПЕРЕДНЕГО ПРИВОДА',REAR_DRIVE_FAILURE:'ОТКАЗ ЗАДНЕГО ПРИВОДА',WHEEL_DETACHED:'ОТОРВАЛО КОЛЕСО'};this.notify(e.randomFailure?randomMessages[e.type]:failureMessages[e.type],2.5);return;}const map={farmerHit:'FARMER_HIT',villagePropHit:'VILLAGE_PROP_HIT',villagePropBreak:'VILLAGE_PROP_HIT',cowHit:'COW_HIT',treeHit:'TREE_HIT',propHit:e.propType==='house'?'HOUSE_HIT':e.propType==='parked'?'TRAFFIC_HIT':'HOUSE_HIT',trafficHit:'TRAFFIC_HIT',fenceBreak:'FENCE_HIT',signHit:'SIGN_HIT',hardLanding:'HARD_LANDING'};
+ receive(e){if(this.ended)return;
+ const lockName={front:'ПЕРЕДНЯЯ',center:'МЕЖОСЕВАЯ',rear:'ЗАДНЯЯ'};
+ if(e.type==='LOCK_WARNING'){this.notify(lockName[e.lock]+' БЛОКИРОВКА: ИЗНОС '+Math.round(e.wear)+'%',2.6);return;}
+ if(e.type==='LOCK_CRITICAL'){this.notify('КРИТИЧЕСКИЙ ИЗНОС: '+lockName[e.lock]+' БЛОКА',3.0);return;}
+ if(e.type==='LOCK_FAILURE'||e.type==='LOCK_JAMMED'){
+  this.stats.brokenLocks++;
+  this.notify(lockName[e.lock]+' БЛОКИРОВКА '+(e.type==='LOCK_JAMMED'?'ЗАКЛИНИЛА!':'СЛОМАНА!'),3.2);
+  return;
+ }
+ if(e.type==='BUMPER_DETACHED'||e.type==='FOG_LIGHT_BROKEN'){
+  this.stats.brokenParts++;
+  const labels={frontBumper:'ПЕРЕДНИЙ БАМПЕР',rearBumper:'ЗАДНИЙ БАМПЕР',fogLeft:'ЛЕВАЯ ТУМАНКА',fogRight:'ПРАВАЯ ТУМАНКА'};
+  this.notify((labels[e.part]||'ДЕТАЛЬ')+' ОТВАЛИЛАСЬ!',2.6);return;
+ }
+ const failureMessages={FRONT_DRIVE_FAILURE:"ПЕРЕДНИЙ ПРИВОД СЛОМАН",REAR_DRIVE_FAILURE:"ЗАДНИЙ ПРИВОД СЛОМАН",WHEEL_DETACHED:"КОЛЕСО ОТОРВАНО · "+(e.wheel||"")};if(failureMessages[e.type]){const randomMessages={FRONT_DRIVE_FAILURE:'ОТКАЗ ПЕРЕДНЕГО ПРИВОДА',REAR_DRIVE_FAILURE:'ОТКАЗ ЗАДНЕГО ПРИВОДА',WHEEL_DETACHED:'ОТОРВАЛО КОЛЕСО'};this.notify(e.randomFailure?randomMessages[e.type]:failureMessages[e.type],2.5);return;}const map={farmerHit:'FARMER_HIT',villagePropHit:'VILLAGE_PROP_HIT',villagePropBreak:'VILLAGE_PROP_HIT',cowHit:'COW_HIT',treeHit:'TREE_HIT',propHit:e.propType==='house'?'HOUSE_HIT':e.propType==='parked'?'TRAFFIC_HIT':'HOUSE_HIT',trafficHit:'TRAFFIC_HIT',fenceBreak:'FENCE_HIT',signHit:'SIGN_HIT',hardLanding:'HARD_LANDING'};
  if(e.type==='treeBreak'){this.stats.trees++;this.feedback.emit('TREE_BREAK',{impulse:e.impulse,position:e.position});return;}
  const type=map[e.type];if(!type)return;
  if(type==='FENCE_HIT')this.stats.fences++;if(type==='SIGN_HIT')this.stats.signs++;

@@ -1,6 +1,6 @@
 // Updates never touch localStorage, IndexedDB or player records.
 // Relative URLs preserve installation at /DerevnyaRally/ on GitHub Pages.
-const APP_VERSION='0.67';
+const APP_VERSION='0.68';
 const updateButton=document.querySelector('#refresh-game');
 const updateStatus=document.querySelector('#update-status');
 const appScope=new URL('./',location.href).href;

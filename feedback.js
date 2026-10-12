@@ -1,7 +1,7 @@
 export const FEEDBACK_CONFIG={maxParticles:360,maxEvents:64,maxRate:31,maxPerFrame:18,landingSpeed:2.8,landingAirTime:.08,maxLandingInterval:.4};
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 export function wheelEmission(w,state){if(w.detached||!w.contact||w.load<50)return null;const speed=Math.abs(state.vehicleSpeed||0)/3.6,spin=Math.abs(w.omega||0)*.44,slip=Math.min(2,Math.abs(w.wheelSlip??w.slipRatio??0)),side=Math.min(1,Math.abs(w.slipAngle||0)*2),energy=Math.max(speed,Math.min(12,spin)*slip),surface=w.surfaceType;
- if(energy<.8)return null;const mult=w.surface?.effectMultiplier||1,wet=w.surface?.wetness||0;if(wet>.12&&surface!=='MUD'&&surface!=='WATER')return{type:'waterSplash',rate:clamp(speed*.22*wet,0,8),energy,slip};
+ if(energy<.8)return null;const mult=w.surface?.effectMultiplier||1,wet=w.surface?.wetness||0;if(wet>.12&&!['MUD','PEAT','WATER','SOFT_DIRT'].includes(surface))return{type:'waterSplash',rate:clamp(speed*.22*wet,0,8),energy,slip};
  if(surface==='DIRT'||surface==='SOFT_DIRT'&&wet<.18)return{type:'dust',rate:clamp((speed*.50+slip*8+side*12)*mult*1.4,0,31),energy,slip};
  if(surface==='MUD'||surface==='PEAT'||(surface==='SOFT_DIRT'&&wet>=.18))
   return{type:'mudSplash',rate:clamp((3+speed*.6+slip*11*(.4+state.throttle))*mult,0,27),energy,slip};

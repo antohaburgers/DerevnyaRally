@@ -102,6 +102,16 @@ function tyreGeometry(kit=false){
  for(const k of [-1,1])g.box(k*.175,0,0,.035,.66,.66,C.rim);
  return g.v;
 }
+function villagerGeometry(){
+ const g=builder();
+ g.box(0,.90,0,.45,1.0,.34,[.70,.58,.37]);
+ g.box(0,1.60,0,.38,.42,.38,[.86,.69,.51]);
+ g.box(0,1.89,0,.54,.14,.51,[.39,.29,.19]);
+ g.box(-.33,1.17,0,.17,.75,.17,[.69,.57,.38]);
+ g.box(.33,1.17,0,.17,.75,.17,[.69,.57,.38]);
+ for(const x of [-.15,.15])g.box(x,.25,0,.13,.50,.16,[.32,.36,.33]);
+ return g.v;
+}
 export class ExpeditionRenderer{
  constructor(canvas,map){
   this.canvas=canvas;this.map=map;const gl=canvas.getContext('webgl',{alpha:false,antialias:false,powerPreference:'high-performance'});
@@ -115,7 +125,7 @@ export class ExpeditionRenderer{
   this.uVP=gl.getUniformLocation(prog,'vp');this.uModel=gl.getUniformLocation(prog,'model');this.uEye=gl.getUniformLocation(prog,'eye');
   [this.p,this.n,this.c].forEach(k=>gl.enableVertexAttribArray(k));
   gl.enable(gl.DEPTH_TEST);gl.clearColor(.69,.80,.77,1);
-  this.chunks=new Map();this.body=this.upload(nivaGeometry());this.tyre=this.upload(tyreGeometry());
+  this.chunks=new Map();this.body=this.upload(nivaGeometry());this.tyre=this.upload(tyreGeometry());this.farmer=this.upload(villagerGeometry());
  }
  upload(data){const gl=this.gl,b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(data),gl.STATIC_DRAW);return{b,count:data.length/9};}
  kit(build){this.gl.deleteBuffer(this.body.b);this.gl.deleteBuffer(this.tyre.b);this.body=this.upload(nivaGeometry(build));this.tyre=this.upload(tyreGeometry(build.tires));}
@@ -129,7 +139,7 @@ export class ExpeditionRenderer{
   gl.vertexAttribPointer(this.p,3,gl.FLOAT,false,36,0);gl.vertexAttribPointer(this.n,3,gl.FLOAT,false,36,12);gl.vertexAttribPointer(this.c,3,gl.FLOAT,false,36,24);
   gl.uniformMatrix4fv(this.uModel,false,model);gl.drawArrays(gl.TRIANGLES,0,m.count);
  }
- frame(visual,camera){
+ frame(visual,camera,delivered=false,t=0){
   const gl=this.gl,dpr=Math.min(1.25,window.devicePixelRatio||1),w=Math.max(1,Math.round(this.canvas.clientWidth*dpr)),h=Math.max(1,Math.round(this.canvas.clientHeight*dpr));
   if(this.canvas.width!==w||this.canvas.height!==h){this.canvas.width=w;this.canvas.height=h;gl.viewport(0,0,w,h);}
   gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(this.program);
@@ -138,5 +148,6 @@ export class ExpeditionRenderer{
   for(const mesh of this.chunks.values())this.mesh(mesh,I);
   this.mesh(this.body,visual.matrix);
   for(const w of visual.wheels)if(!w.detached)this.mesh(this.tyre,matPose(w.position[0],w.position[1],w.position[2],visual.yaw+(w.front?w.steer:0)));
+  if(delivered){for(let i=0;i<14;i++){const a=i*Math.PI*2/14+Math.sin(t*.25)*.1;const r=10+i%3*2;const x=this.map.goal.x+Math.cos(a)*r,z=this.map.goal.z+Math.sin(a)*r;this.mesh(this.farmer,matPose(x,this.map.terrainHeight(x,z)+Math.abs(Math.sin(t*5+i))*.30,z,-a));}}
  }
 }

@@ -1,6 +1,6 @@
 import {SURFACE_CONFIG} from './surfaces.js?v=048';
 import {boxContact,resolveBox} from './colliders.js?v=028';
-import {rotate,STADIUM_DRIVE,applyStadiumDrive} from './physics.js?v=065';
+import {rotate,STADIUM_DRIVE,applyStadiumDrive} from './physics.js?v=066';
 import {revOnGrid} from './race.js?v=065';
 export const STADIUM_CONFIG={rx:70,rz:40,duration:60,intro:6,countdown:3,outro:5,boundaryGrace:3,initialCows:30,finalCows:50,finalSeconds:15,respawnDelay:.65,comboWindow:3,maxCombo:5,points:100,cowDamageScale:.08,recordKey:'niva3d.cowStadium.record.v1',maxSpectators:42,bowlDepth:0,cowCalmSpeed:.7,cowAlertSpeed:1.2,cowPanicSpeed:2.5,cowDodgeSpeed:3.2,attackLimit:3,attackChance:.32,attackRange:[7,28],attackWindup:.45,attackDuration:1.8,attackSpeed:3.5,attackCooldown:[5,9],longitudinalGrip:1.24,lateralGrip:1.12,rollingResistance:.014};
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n)),smooth=t=>{t=clamp(t,0,1);return t*t*(3-2*t);},wrap=a=>Math.atan2(Math.sin(a),Math.cos(a));

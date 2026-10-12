@@ -8,6 +8,13 @@ impacts.LOCK_WARNING={group:'diagnostic',frequency:570,filter:1700,duration:.14}
 impacts.LOCK_CRITICAL={group:'diagnostic',frequency:860,filter:2200,duration:.28};
 impacts.LOCK_FAILURE={group:'mechanical',frequency:180,filter:1700,duration:.52};
 impacts.LOCK_JAMMED={group:'mechanical',frequency:130,filter:1600,duration:.55};
+impacts.WINCH_ATTACHED={group:'metal',frequency:520,filter:3200,duration:.18};
+impacts.WINCH_SNAPPED={group:'mechanical',frequency:900,filter:5000,duration:.38};
+impacts.WINCH_OVERHEATED={group:'diagnostic',frequency:950,filter:2400,duration:.26};
+impacts.TYRE_UNSEATED={group:'mechanical',frequency:220,filter:1400,duration:.42};
+impacts.TYRE_PUNCTURE={group:'mechanical',frequency:280,filter:1800,duration:.22};
+impacts.ENGINE_FLOODED={group:'mechanical',frequency:82,filter:700,duration:.58};
+impacts.ENGINE_RESTARTED={group:'mechanical',frequency:330,filter:2100,duration:.34};
 impacts.VILLAGE_PROP_HIT={group:'village',frequency:180,filter:2800,duration:.28};impacts.POLE_BREAK={group:'wood',frequency:150,filter:2600,duration:.32};impacts.FARMER_HIT={group:'farmer',frequency:220,filter:1800,duration:.25};
 impacts.COW_HIT={group:'animal',frequency:65,filter:850,duration:.38};
 impacts.AI_HORN={group:'horn',frequency:370,filter:2400,duration:.22};

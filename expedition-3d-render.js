@@ -36,7 +36,7 @@ function tileGeometry(map,tile){
   const a=map.river(x),b=map.river(x+16);
   if(Math.max(a.center+a.halfWidth,b.center+b.halfWidth)<tile.z0-16||
      Math.min(a.center-a.halfWidth,b.center-b.halfWidth)>tile.z0+s+16)continue;
-  const y=map.terrainHeight(x,a.center)+.55,Y=map.terrainHeight(x+16,b.center)+.55;
+  const y=map.baseHeight(x,a.center)+.55,Y=map.baseHeight(x+16,b.center)+.55;
   g.quad([x,y,a.center-a.halfWidth],[x,y,a.center+a.halfWidth],
     [x+16,Y,b.center+b.halfWidth],[x+16,Y,b.center-b.halfWidth],C.water);
  }
@@ -122,7 +122,7 @@ export class ExpeditionRenderer{
  sync(){
   const active=this.map.activeTiles,keep=new Set(active.map(t=>t.key));
   for(const [key,g] of this.chunks)if(!keep.has(key)){this.gl.deleteBuffer(g.b);this.chunks.delete(key);}
-  for(const tile of active)if(!this.chunks.has(tile.key))this.chunks.set(tile.key,this.upload(tileGeometry(this.map,tile)));
+  for(const tile of active){if(!this.chunks.has(tile.key))this.chunks.set(tile.key,this.upload(tileGeometry(this.map,tile)));}
  }
  mesh(m,model){
   const gl=this.gl;if(!m?.count)return;gl.bindBuffer(gl.ARRAY_BUFFER,m.b);

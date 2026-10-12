@@ -34,11 +34,28 @@ import {EngineAudio} from './engine-audio.js?v=037';
 const canvas=document.querySelector('canvas'),canvasHome=canvas.parentNode,canvasAnchor=canvas.nextSibling,gl=canvas.getContext('webgl',{antialias:true,alpha:false});if(!gl){document.querySelector('#error').hidden=false;document.querySelector('#error').textContent='WebGL недоступен. Открой сайт в Safari или Chrome.';throw Error('WebGL unavailable');}
 function shader(type,src){const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(s));return s;}
 const fragmentPrecision=gl.getShaderPrecisionFormat?.(gl.FRAGMENT_SHADER,gl.HIGH_FLOAT)?.precision>0?'highp':'mediump';
-const program=gl.createProgram();gl.attachShader(program,shader(gl.VERTEX_SHADER,`attribute vec3 p;attribute vec3 n;attribute vec4 t;varying vec3 ground;varying vec4 roadUV;uniform mat4 mvp;uniform mat4 model;uniform vec3 eye;varying float light;varying float fog;varying vec3 worldPosition;void main(){worldPosition=(model*vec4(p,1.)).xyz;ground=p;roadUV=t;light=.76+.24*max(dot(normalize(mat3(model)*n),normalize(vec3(-.5,1.,.3))),0.);gl_Position=mvp*vec4(p,1.);fog=distance((model*vec4(p,1.)).xyz,eye);}`));gl.attachShader(program,shader(gl.FRAGMENT_SHADER,`precision ${fragmentPrecision} float;uniform vec3 color;uniform float style;varying vec3 ground;varying vec4 roadUV;varying float light;varying float fog;varying vec3 worldPosition;uniform vec3 skyFog;uniform vec3 daylightColor;uniform vec3 headOrigin;uniform vec3 headDirection;uniform float ambientLevel;uniform float wetness;uniform float headlights;uniform float emissive;uniform float headRange;uniform vec2 fogLimits;uniform vec4 npcHead0;uniform vec4 npcHead1;uniform vec3 npcDirection0;uniform vec3 npcDirection1;
+const program=gl.createProgram();gl.attachShader(program,shader(gl.VERTEX_SHADER,`attribute vec3 p;attribute vec3 n;attribute vec4 t;varying vec3 ground;varying vec4 roadUV;uniform mat4 mvp;uniform mat4 model;uniform vec3 eye;varying float light;varying float fog;varying vec3 worldPosition;void main(){worldPosition=(model*vec4(p,1.)).xyz;ground=p;roadUV=t;light=.76+.24*max(dot(normalize(mat3(model)*n),normalize(vec3(-.5,1.,.3))),0.);gl_Position=mvp*vec4(p,1.);fog=distance((model*vec4(p,1.)).xyz,eye);}`));gl.attachShader(program,shader(gl.FRAGMENT_SHADER,`precision ${fragmentPrecision} float;uniform vec3 color;uniform float style;uniform vec3 mudZones;varying vec3 ground;varying vec4 roadUV;varying float light;varying float fog;varying vec3 worldPosition;uniform vec3 skyFog;uniform vec3 daylightColor;uniform vec3 headOrigin;uniform vec3 headDirection;uniform float ambientLevel;uniform float wetness;uniform float headlights;uniform float emissive;uniform float headRange;uniform vec2 fogLimits;uniform vec4 npcHead0;uniform vec4 npcHead1;uniform vec3 npcDirection0;uniform vec3 npcDirection1;
 float hash(vec2 p){return fract(sin(dot(mod(p,64.),vec2(12.9898,78.233)))*437.58);}
 float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),mix(hash(i+vec2(0.,1.)),hash(i+vec2(1.,1.)),f.x),f.y);}
 float npcBeam(vec4 head,vec3 direction){vec3 delta=worldPosition-head.xyz;float ahead=dot(delta,direction);vec3 off=delta-direction*ahead;float spread=1.+max(0.,ahead)*.38;return head.w*smoothstep(0.,2.,ahead)*(1.-smoothstep(42.,75.,ahead))*(1.-smoothstep(spread*.6,spread,length(off.xz)))*(1.-smoothstep(3.,9.,abs(off.y)));}
-void main(){vec3 c=color;if(style>0.){c=mix(c,c*vec3(1.09,1.04,.94),roadUV.w);vec2 uv=roadUV.xy;float broad=noise(uv*.15),grain=noise(uv*2.);c*=.91+.15*broad+.035*grain;if(style<1.5){c=mix(c,vec3(.48,.43,.31),smoothstep(.62,.88,broad)*.26);c+=vec3(.025,.018,.009)*(grain-.5);float rut=exp(-pow((abs(roadUV.y)-.84)/.21,2.));c*=1.-.075*rut;float edge=smoothstep(.80,1.,abs(roadUV.z)+.05*(broad-.5));c=mix(c,mix(vec3(.43,.50,.34),vec3(.63,.61,.38),roadUV.w),edge*.75);}if(style>2.5&&style<3.5)c*=.92+.08*sin(roadUV.x*13.);if(style>3.5&&style<4.5)c=mix(c,vec3(.55,.66,.63),pow(max(0.,noise(uv*.8)-.3),3.)*.5);if(style>4.5&&style<5.5){float patch=noise(uv*vec2(.027,.046))*.65+noise(uv*vec2(.071,.11))*.35;vec3 forest=mix(vec3(.31,.39,.26),vec3(.47,.45,.31),smoothstep(.42,.78,patch));vec3 field=mix(vec3(.48,.51,.32),vec3(.68,.63,.42),smoothstep(.27,.73,patch));field=mix(field,vec3(.56,.48,.34),smoothstep(.66,.88,noise(uv*.065))*.55);c=mix(forest,field,roadUV.w)*(.96+.055*grain);float verge=1.-smoothstep(1.04,1.70,abs(roadUV.z)+.09*(noise(uv*.16)-.5));c=mix(c,vec3(.49,.44,.32),verge*.64);float oldRut=exp(-pow((abs(roadUV.y)-5.4)/.23,2.));c*=1.-oldRut*verge*.09;}if(style>5.5&&style<6.5){c=mix(vec3(.64,.59,.44),color*(.94+.08*broad+.025*grain),roadUV.w);float cracks=1.-smoothstep(.0,.025,abs(noise(uv*.5)-.50));c*=1.-cracks*.12;float edge=smoothstep(.93,1.,abs(roadUV.z)+.025*(broad-.5));c=mix(c,vec3(.55,.50,.36),edge*.65);}if(style>6.5)c=color*(.74+.20*broad);if(style>7.5&&style<8.5){
+void main(){vec3 c=color;float dirtOpacity=1.;
+if(style< -1.5){
+ // Body-local UV: stable muddy spatter independent of camera, wheel spin and world shift.
+ // Three separate levels — sills, doors, roof — supplied by current wet-terrain exposure.
+ float lower=mix(mudZones.x,mudZones.y,smoothstep(.58,1.29,ground.y));
+ float level=mix(lower,mudZones.z,smoothstep(1.28,1.76,ground.y));
+ vec2 uv=ground.xz+vec2(ground.y*.91,ground.y*.38);
+ float clouds=noise(uv*7.2+vec2(5.1,13.7));
+ float freckles=noise(uv*27.0+vec2(17.1,4.3));
+ float runoff=noise(vec2(ground.x*5.1+ground.z*1.4,ground.z*.9));
+ float vertical=1.-smoothstep(.52,1.75,ground.y);
+ float splash=smoothstep(.37,.73,clouds*.72+freckles*.28);
+ float streak=smoothstep(.48,.72,runoff)*vertical;
+ dirtOpacity=clamp(level*(.18+.60*splash+.16*streak),0.,.88);
+ if(dirtOpacity<.018)discard;
+ c=mix(color,vec3(.23,.20,.13),smoothstep(.50,.90,clouds)*.58);
+}
+if(style>0.){c=mix(c,c*vec3(1.09,1.04,.94),roadUV.w);vec2 uv=roadUV.xy;float broad=noise(uv*.15),grain=noise(uv*2.);c*=.91+.15*broad+.035*grain;if(style<1.5){c=mix(c,vec3(.48,.43,.31),smoothstep(.62,.88,broad)*.26);c+=vec3(.025,.018,.009)*(grain-.5);float rut=exp(-pow((abs(roadUV.y)-.84)/.21,2.));c*=1.-.075*rut;float edge=smoothstep(.80,1.,abs(roadUV.z)+.05*(broad-.5));c=mix(c,mix(vec3(.43,.50,.34),vec3(.63,.61,.38),roadUV.w),edge*.75);}if(style>2.5&&style<3.5)c*=.92+.08*sin(roadUV.x*13.);if(style>3.5&&style<4.5)c=mix(c,vec3(.55,.66,.63),pow(max(0.,noise(uv*.8)-.3),3.)*.5);if(style>4.5&&style<5.5){float patch=noise(uv*vec2(.027,.046))*.65+noise(uv*vec2(.071,.11))*.35;vec3 forest=mix(vec3(.31,.39,.26),vec3(.47,.45,.31),smoothstep(.42,.78,patch));vec3 field=mix(vec3(.48,.51,.32),vec3(.68,.63,.42),smoothstep(.27,.73,patch));field=mix(field,vec3(.56,.48,.34),smoothstep(.66,.88,noise(uv*.065))*.55);c=mix(forest,field,roadUV.w)*(.96+.055*grain);float verge=1.-smoothstep(1.04,1.70,abs(roadUV.z)+.09*(noise(uv*.16)-.5));c=mix(c,vec3(.49,.44,.32),verge*.64);float oldRut=exp(-pow((abs(roadUV.y)-5.4)/.23,2.));c*=1.-oldRut*verge*.09;}if(style>5.5&&style<6.5){c=mix(vec3(.64,.59,.44),color*(.94+.08*broad+.025*grain),roadUV.w);float cracks=1.-smoothstep(.0,.025,abs(noise(uv*.5)-.50));c*=1.-cracks*.12;float edge=smoothstep(.93,1.,abs(roadUV.z)+.025*(broad-.5));c=mix(c,vec3(.55,.50,.36),edge*.65);}if(style>6.5)c=color*(.74+.20*broad);if(style>7.5&&style<8.5){
  // Hand-painted, low-poly woodland stone: facets, slate seams, olive moss.
  float strata=noise(uv*vec2(.34,.61)+vec2(7.,3.));
  float face=smoothstep(.34,.69,strata);
@@ -51,7 +68,7 @@ void main(){vec3 c=color;if(style>0.){c=mix(c,c*vec3(1.09,1.04,.94),roadUV.w);ve
  c*=1.-.19*seam;
  float moss=smoothstep(.70,.92,noise(uv*.24+vec2(11.,8.)))*.18;
  c=mix(c,vec3(.32,.39,.29),moss);
-} }float ahead=dot(worldPosition-headOrigin,headDirection);vec3 off=worldPosition-headOrigin-headDirection*ahead;float spread=1.0+max(0.,ahead)*.40;float beam=headlights*smoothstep(0.,1.5,ahead)*(1.-smoothstep(headRange*.724,headRange,ahead))*(1.-smoothstep(spread*.72,spread,length(off.xz)))*(1.-smoothstep(3.,11.,abs(off.y)));if(style>0.&&(style<7.5||(style>7.5&&style<8.5)))c*=1.-wetness*.32;vec3 lit=c*light*daylightColor*ambientLevel+vec3(1.,.91,.69)*c*beam*(.9-.55*ambientLevel);lit+=vec3(1.,.92,.73)*c*(npcBeam(npcHead0,npcDirection0)+npcBeam(npcHead1,npcDirection1))*.36;lit=max(lit,c*emissive);gl_FragColor=vec4(mix(lit,skyFog,smoothstep(fogLimits.x,fogLimits.y,fog)),1.);}`));gl.linkProgram(program);if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(program));gl.useProgram(program);boundShape=null;const bodyLivery=createLiveryRenderer(gl,shader);const loc={};for(const k of ['mvp','model','color','eye','style','skyFog','daylightColor','headOrigin','headDirection','ambientLevel','wetness','headlights','emissive','headRange','fogLimits','npcHead0','npcHead1','npcDirection0','npcDirection1'])loc[k]=gl.getUniformLocation(program,k);for(const k of ['p','n','t'])loc[k]=gl.getAttribLocation(program,k);
+} }float ahead=dot(worldPosition-headOrigin,headDirection);vec3 off=worldPosition-headOrigin-headDirection*ahead;float spread=1.0+max(0.,ahead)*.40;float beam=headlights*smoothstep(0.,1.5,ahead)*(1.-smoothstep(headRange*.724,headRange,ahead))*(1.-smoothstep(spread*.72,spread,length(off.xz)))*(1.-smoothstep(3.,11.,abs(off.y)));if(style>0.&&(style<7.5||(style>7.5&&style<8.5)))c*=1.-wetness*.32;vec3 lit=c*light*daylightColor*ambientLevel+vec3(1.,.91,.69)*c*beam*(.9-.55*ambientLevel);lit+=vec3(1.,.92,.73)*c*(npcBeam(npcHead0,npcDirection0)+npcBeam(npcHead1,npcDirection1))*.36;lit=max(lit,c*emissive);gl_FragColor=vec4(mix(lit,skyFog,smoothstep(fogLimits.x,fogLimits.y,fog)),dirtOpacity);}`));gl.linkProgram(program);if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(program));gl.useProgram(program);boundShape=null;const bodyLivery=createLiveryRenderer(gl,shader);const loc={};for(const k of ['mvp','model','color','eye','style','mudZones','skyFog','daylightColor','headOrigin','headDirection','ambientLevel','wetness','headlights','emissive','headRange','fogLimits','npcHead0','npcHead1','npcDirection0','npcDirection1'])loc[k]=gl.getUniformLocation(program,k);for(const k of ['p','n','t'])loc[k]=gl.getAttribLocation(program,k);
 function mul(a,b,o=new Float32Array(16)){o.fill(0);for(let c=0;c<4;c++)for(let r=0;r<4;r++)for(let k=0;k<4;k++)o[c*4+r]+=a[k*4+r]*b[c*4+k];return o;}
 function matrix(x,y,z,sx,sy,sz,a=0){const c=Math.cos(a),s=Math.sin(a);return new Float32Array([c*sx,0,-s*sx,0,0,sy,0,0,s*sz,0,c*sz,0,x,y,z,1]);}
 function norm(v){const d=Math.hypot(...v)||1;return v.map(x=>x/d);}function cross(a,b){return[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];}function dot(a,b){return a.reduce((s,v,i)=>s+v*b[i],0);}function view(e,t,up=[0,1,0]){const z=norm(e.map((v,i)=>v-t[i])),x=norm(cross(up,z)),y=cross(z,x);return new Float32Array([x[0],y[0],z[0],0,x[1],y[1],z[1],0,x[2],y[2],z[2],0,-dot(x,e),-dot(y,e),-dot(z,e),1]);}
@@ -212,6 +229,16 @@ function vehicle(eye){body=visual.matrix;const attached=name=>garageOpen||run.me
  if(garageBuild.livery!=='none'&&bodyLivery.draw(garageBuild.livery,mul(pv,body),body,environment,eye)){
   profiler.drawCalls+=2;gl.useProgram(program);boundShape=null;
  }
+ // Body-space overlay AFTER painted livery, BEFORE glazing and chrome trim.
+ // Four bounded draws, no extra meshes or extra global particle pool.
+ const mudZones=run.expedition.mudZones||[0,0,0];
+ if(mudZones[0]>.025||mudZones[1]>.025||mudZones[2]>.025){
+  gl.uniform3fv(loc.mudZones,mudZones);
+  gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
+  gl.depthMask(false);gl.depthFunc(gl.LEQUAL);
+  for(const part of [shell,cabin,roof,bonnet])draw(part,body,[.29,.235,.157],-2);
+  gl.depthMask(true);gl.depthFunc(gl.LESS);gl.disable(gl.BLEND);
+ }
  for(const panel of glazing)draw(panel.shape,body,panel.color);
 part(0,.49,0,1.32,.12,2.6,dark);
 // Thin arch mouldings, roof gutters, bonnet stampings and wipers.
@@ -233,14 +260,8 @@ for(const z of [-1.90,1.91]){if(!attached(z>0?'frontBumper':'rearBumper'))contin
  if(garageBuild.fogLights)for(const x of [-.48,.48]){if(!attached(x<0?'fogLeft':'fogRight'))continue;const z=garageBuild.frontBumper?2.19:2.08;part(x,.71,z,.40,.08,.11,dark);lampEmission=environment.headlights?2:0;roundPart(x,.77,z+.06,.225,.065,[.98,.78,.19]);lampEmission=0;roundPart(x,.77,z+.09,.165,.015,[1,.89,.41]);}
  if(garageBuild.winch){part(0,.59,2.20,.54,.28,.35,dark);part(0,.59,2.40,.40,.17,.075,chrome);for(const x of [-.24,.24])part(x,.60,2.36,.045,.31,.065,chrome);}
  if(garageBuild.snorkel){part(.90,1.23,.62,.16,.70,.18,dark);part(.91,1.58,.62,.21,.14,.21,dark);part(.91,1.63,.52,.23,.12,.27,dark);part(.91,1.59,.71,.22,.08,.09,chrome);part(.93,.98,.64,.20,.10,.30,dark);}
-const mud=run.expedition.grime||0,scars=run.expedition.scratches||0;
- if(mud>.05){
-  const brown=[.24,.20,.13],sooty=[.27,.27,.19],count=Math.min(16,Math.round(mud*16));
-  for(let k=0;k<count;k++){
-   const a=k%8,side=k<8?-1:1,xx=side*.851,z=-1.56+(a%4)*.91,y=.58+Math.floor(a/4)*.31;
-   part(xx,y,z,.025,.11+mud*.13,.28+mud*.14,k%3?brown:sooty);
-  }
- }
+// No box-shaped dirt panels; body mud is blended by procedural GPU mask.
+const scars=run.expedition.scratches||0;
  if(scars>.045){
   const stripes=Math.min(5,Math.ceil(scars*5));
   for(let i=0;i<stripes;i++){

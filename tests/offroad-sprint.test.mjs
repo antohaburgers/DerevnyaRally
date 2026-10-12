@@ -28,13 +28,13 @@ test('race classification preserves original cup and includes both trophy distan
  assert.equal(isRaceMode(GAME_MODE.OFFROAD),false);
  assert.equal(SPRINT_CONFIG.lengths[GAME_MODE.OFFROAD_SPRINT_5],5000);
  assert.equal(SPRINT_CONFIG.lengths[GAME_MODE.OFFROAD_SPRINT_10],10000);
- assert.equal(RACE_CONFIG.racers,10);
+ assert.equal(RACE_CONFIG.racers,10);assert.equal(RACE_CONFIG.offroadRacers,6);
 });
 test('seeded rivals have reproducible and genuinely different offroad setups',()=>{
- const builds=Array.from({length:9},(_,i)=>offroadRivalBuild(73915,i));
- const again=Array.from({length:9},(_,i)=>offroadRivalBuild(73915,i));
+ const builds=Array.from({length:RACE_CONFIG.offroadRacers-1},(_,i)=>offroadRivalBuild(73915,i));
+ const again=Array.from({length:RACE_CONFIG.offroadRacers-1},(_,i)=>offroadRivalBuild(73915,i));
  assert.deepEqual(builds,again);
- assert.equal(new Set(builds.map(o=>JSON.stringify([o.build.tires,o.build.engine,o.build.suspension,o.build.springTune,o.build.tyrePressure,o.locks]))).size,9);
+ assert.equal(new Set(builds.map(o=>JSON.stringify([o.build.tires,o.build.engine,o.build.suspension,o.build.springTune,o.build.tyrePressure,o.locks]))).size,RACE_CONFIG.offroadRacers-1);
  for(const rival of builds){
   assert.ok(['stock','offroad'].includes(rival.build.tires));
   assert.ok(['stock','turbo'].includes(rival.build.engine));

@@ -412,7 +412,7 @@ function paintGarageUI(){
  const height=Math.round(kit.lift*1000),cfg=suspensionConfig(CAR_CONFIG,garageBuild);
  const travel=Math.round((cfg.suspensionTravel.front.compression+cfg.suspensionTravel.front.droop)*1000);
  const roll=tune.antiRoll<1?'БОЛЬШЕ КРЕН':tune.antiRoll>1?'МЕНЬШЕ КРЕН':'СТОКОВЫЙ КРЕН';
- document.querySelector('#garage-suspension-specs').textContent='ЛИФТ +'+height+' ММ  ·  ХОД ПЕРЕДНЕЙ +'+travel+' ММ  ·  '+roll;
+ document.querySelector('#garage-suspension-specs').textContent='ЛИФТ +'+height+' ММ  ·  ХОД ПЕРЕДНЕЙ '+travel+' ММ  ·  '+roll;
  document.querySelector('#garage-summary').textContent=kit.label+' · '+tune.label+' · '+(garageBuild.tires==='offroad'?'MT':'СТОК ШИНЫ')+' · '+(garageBuild.engine==='turbo'?'ТУРБО':'АТМО');
 }
 garagePanel.addEventListener('click',e=>{const button=e.target.closest('[data-tune]');if(!button)return;const key=button.dataset.tune;if(!(key in STOCK_BUILD))return;garageBuild[key]=button.dataset.value||!garageBuild[key];garageBuild=saveBuild(localStore,garageBuild);paintGarageUI();});

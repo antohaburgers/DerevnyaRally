@@ -1,4 +1,4 @@
-import {MechanicalDamage} from './mechanical.js?v=056';
+import {MechanicalDamage} from './mechanical.js?v=065';
 import {ExpeditionSystems} from './expedition-systems.js?v=060';
 import {rotate} from './physics.js?v=061';
 export const RUN_CONFIG={bestKey:'niva3d.bestMeters.v1',hp:100,fuel:100,fuelConsumptionMultiplier:1.15,fuelIdle:.006,fuelThrottle:.085,fuelRPM:.026,fuelLoad:.020,lowConsumption:1.10,repair:25,refuel:25,impactThreshold:1,impactExponent:1.65,impactScale:.20,impactMax:75,hitCooldown:.35,landingThreshold:4.5,landingScale:2,landingDamageMultiplier:.70,slideRate:.08,slideSpeedRate:.025,maxSlideSpeed:15,saveInterval:2};

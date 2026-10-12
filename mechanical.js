@@ -48,7 +48,7 @@ export class MechanicalDamage{
   this.apply();return true;
  }
  failLock(lock,event={}){
-  if(!this.body||this.lockFaults[lock]||!['front','rear','center'].includes(lock))return false;
+  if(!this.body||this.lockFaults[lock]||!['front','rear','center'].includes(lock))return false;if(this.body.state.arcadeDrive&&lock==='rear')return false;
   const s=this.body.state,engaged=!!s[lock+'Locked'],jam=engaged&&this.random()<.27;
   this.lockFaults[lock]=jam?'JAMMED':'OPEN';this.lockWear[lock]=100;
   s[lock+'Locked']=jam;
@@ -62,7 +62,7 @@ export class MechanicalDamage{
   if(!this.body||!eligible.has(type)||damage<31)return;
   const s=this.body.state;
   for(const lock of ['front','rear','center']){
-   if(this.lockFaults[lock]||!s[lock+'Locked'])continue;
+   if(s.arcadeDrive&&lock==='rear')continue;if(this.lockFaults[lock]||!s[lock+'Locked'])continue;
    const chance=Math.min(.075,.004+(damage-31)*.0007+this.lockWear[lock]*.00025);
    if(this.random()<chance){this.failLock(lock,event);break;}
   }
@@ -77,7 +77,7 @@ export class MechanicalDamage{
   const throttle=Math.max(0,Math.min(1,s.throttle||0)),steer=Math.abs(s.steeringInput||this.body.steer||0),speed=s.vehicleSpeed||0;
   const turn=solid>1&&speed>7?Math.min(1.7,steer*speed/15):0;
   for(const lock of ['front','rear','center']){
-   if(this.lockFaults[lock]||!s[lock+'Locked'])continue;
+   if(s.arcadeDrive&&lock==='rear')continue;if(this.lockFaults[lock]||!s[lock+'Locked'])continue;
    const diff=lock==='front'?omega(0,1):lock==='rear'?omega(2,3):
      Math.abs(((w[0]?.omega||0)+(w[1]?.omega||0)-(w[2]?.omega||0)-(w[3]?.omega||0))*.5);
    const stress=throttle*(.23+.70*slip)+Math.min(2.1,diff/11)*.44+

@@ -7,25 +7,48 @@ import {PropCollisions} from './props.js?v=028';
 import {Pickups} from './pickups.js?v=028';
 import {CIRCUIT_CONFIG} from './circuit-world.js?v=028';
 import {boxContact} from './colliders.js?v=028';
-export const GAME_MODE={SLAUGHTER:'SLAUGHTER',EXPEDITION:'EXPEDITION',ENDLESS:'ENDLESS',OFFROAD:'OFFROAD',CIRCUIT:'CIRCUIT',SPRINT_5:'SPRINT_5',SPRINT_10:'SPRINT_10'};
-export const isRaceMode=mode=>mode===GAME_MODE.CIRCUIT||mode===GAME_MODE.SPRINT_5||mode===GAME_MODE.SPRINT_10;
+import {STOCK_BUILD,suspensionConfig,tireSurface} from './garage.js?v=055';
+export const GAME_MODE={SLAUGHTER:'SLAUGHTER',EXPEDITION:'EXPEDITION',ENDLESS:'ENDLESS',OFFROAD:'OFFROAD',CIRCUIT:'CIRCUIT',SPRINT_5:'SPRINT_5',SPRINT_10:'SPRINT_10',OFFROAD_SPRINT_5:'OFFROAD_SPRINT_5',OFFROAD_SPRINT_10:'OFFROAD_SPRINT_10'};
+export const isOffroadSprint=mode=>mode===GAME_MODE.OFFROAD_SPRINT_5||mode===GAME_MODE.OFFROAD_SPRINT_10;
+export const isRaceMode=mode=>mode===GAME_MODE.CIRCUIT||mode===GAME_MODE.SPRINT_5||mode===GAME_MODE.SPRINT_10||isOffroadSprint(mode);
 export const RACE_CONFIG={laps:3,racers:10,countdown:10,cupKey:'niva3d.cupStats.v1',aiSpeeds:[29,32,30,33,28.8,32.5,30.5,31,29.2],colors:[[.90,.88,.80],[.70,.18,.13],[.18,.34,.62],[.24,.47,.27],[.70,.61,.43],[.80,.80,.71],[.58,.22,.18],[.22,.41,.61],[.38,.52,.34]]};
 export const AI_NAMES='Кузьмич|Петрович|Михалыч|Палыч|Саныч|Иваныч|Семёныч|Егорыч|Дядя Гена|Дядя Витя|Батя|Просто Серёга|Тихий Лёха|Толян|Валерыч|Геннадий|Ветеран|Призрачный Гонщик|Колхозный Стиг|Сельский Сенна|Шумахер из Катышки|Король Обочины|Грязевой Барон|Дрифт-Дед|Пивной Рейсер|Геннадий Турбо|Ночной Хмырь|Бешеный Петрович|Безумный Кузьмич|Дед на Полном|Последний Самоблок|Тракторист 3000|Неубиваемый|Чёрный Бампер|Синий Дым|Правый Привод|Левый Привод|Три Колеса|Живой Кардан|Злой Карбюратор|Дед Блокировка|Грязный Санёк|Обочинный Волк|Лесной Шумахер|Катышкинский Демон|Великий Петрович|Последний Колхозник|Ржавый Барон|Без Тормозов|Батя на Ниве'.split('|');
 export function chooseNames(seed){const pool=AI_NAMES.slice();let state=seed>>>0;for(let i=pool.length-1;i>0;i--){state=(Math.imul(state,1664525)+1013904223)>>>0;const j=Math.floor(state/4294967296*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}return pool.slice(0,9);}
+// Deterministic, independent off-road upgrades for the nine competing Nivas.
+export function offroadRivalBuild(seed,index){
+ let state=(seed^Math.imul(index+11,0x9e3779b1))>>>0;
+ const rand=()=>{state=(Math.imul(state,1664525)+1013904223)>>>0;return state/4294967296;};
+ const choose=choices=>choices[Math.floor(rand()*choices.length)];
+ const build={...STOCK_BUILD,tires:choose(['offroad','offroad','offroad','stock']),
+  engine:choose(['stock','stock','turbo']),suspension:choose(['stock','trophy','trophy','extreme']),
+  springTune:choose(['soft','soft','standard','hard']),tyrePressure:choose(['soft','trail','trail','road']),
+  snorkel:rand()<.5,arches:rand()<.6,frontBumper:rand()<.45,rearBumper:rand()<.4,winch:false};
+ const locks={center:rand()<.88,rear:rand()<.65,front:rand()<.35};
+ return{build,locks,label:[build.engine==='turbo'?'ТУРБО':'АТМО',build.tires==='offroad'?'М/Т':'СТОК',build.suspension==='extreme'?'ЛИФТ +60':build.suspension==='trophy'?'ЛИФТ +40':'СТОК'].join(' · ')};
+}
 const wrap=a=>Math.atan2(Math.sin(a),Math.cos(a)),clamp=(a,l,h)=>Math.max(l,Math.min(h,a));
 export function raceInput(body,world,personality=1,other=[],controllerDt=1/60){const p=world.locate(body.p[0],body.p[2]),speed=Math.hypot(body.v[0],body.v[2]),look=clamp(9+speed*.72,10,28),target=world.atDistance(p.s+look),front=rotate(body.q,[0,0,1]),yaw=Math.atan2(front[0],front[2]);let desired=Math.atan2(target.x-body.p[0],target.z-body.p[2]),curve=0;
  for(const distance of [12,25,40,personality<1.2?60:personality>1.28?48:55]){const next=world.atDistance(p.s+distance);curve=Math.max(curve,Math.abs(wrap(next.yaw-p.yaw))/distance);}
+ const offroad=world.offroadMode&&world.finiteRace;
  let targetSpeed=Math.min(29.17,Math.sqrt((5.6+.6*Math.max(0,personality-1))/Math.max(.004,curve)));if(['HAIRPIN','APEX_TURN'].includes(target.section.type))targetSpeed=Math.min(targetSpeed,19);
+ if(offroad){const t=target.section.type,technical=['ROCK_CRAWL','ROCK_STEPS','MOUNTAIN_PASS','CROSS_AXLE','CHESS_AXLE','EROSION_GULLY','RUT_MAZE','RUT_GAUNTLET','PEAT_BOG','DEEP_MUD','FOREST_FORD','MUD_CLIMB'].includes(t);
+  const rock=['ROCK_CRAWL','ROCK_STEPS','MOUNTAIN_PASS'].includes(t),limit=rock?5.8:technical?7.4:12;
+  targetSpeed=Math.min(targetSpeed,(limit+Math.max(-.5,Math.min(2,personality-1.2))*1.8)*(body.state.turboInstalled?1.07:1));
+  if(Math.abs(p.lateral)>p.width/2-.9)targetSpeed=Math.min(targetSpeed,5.8);
+ }
  const hazard=target.section.localFeatures.find(o=>Math.abs((o.u-target.u)*target.section.length)<14&&['ROCK','LOG_LARGE','LOG_MEDIUM','DITCH'].includes(o.kind));if(hazard){const lane=hazard.lateral>0?-1.3:1.3;desired=Math.atan2(target.x+Math.cos(target.yaw)*lane-body.p[0],target.z-Math.sin(target.yaw)*lane-body.p[2]);targetSpeed=Math.min(targetSpeed,23);}
  let passing=0;for(const n of other){if(n===body)continue;const dx=n.p[0]-body.p[0],dz=n.p[2]-body.p[2],ahead=dx*Math.sin(yaw)+dz*Math.cos(yaw),side=dx*Math.cos(yaw)-dz*Math.sin(yaw);if(ahead>0&&ahead<18&&Math.abs(side)<2.0){passing=side>=0?-1.6:1.6;const direction=rotate(n.q,[0,0,1]),parallel=direction[0]*front[0]+direction[2]*front[2]>.55;if(ahead<5&&parallel&&Math.hypot(n.v[0],n.v[2])>1)targetSpeed=Math.min(targetSpeed,Math.max(7,Math.hypot(n.v[0],n.v[2])));}}
  if(passing&&!hazard)desired=Math.atan2(target.x+Math.cos(target.yaw)*passing-body.p[0],target.z-Math.sin(target.yaw)*passing-body.p[2]);let steer=clamp(-wrap(desired-yaw)*2.2+body.omega[1]*.12,-1,1);
  if(Math.abs(p.lateral)>p.width/2)targetSpeed=Math.min(targetSpeed,9);if(body.state.detachedWheel)targetSpeed=Math.min(targetSpeed,10);
- const steep=!!(p.section.hill&&Math.abs(p.section.hill.angle)>30||target.section.hill&&Math.abs(target.section.hill.angle)>30),mud=body.wheels.some(w=>!w.detached&&(w.mudDepth||0)>.65&&speed<3),rangeGoal=steep||mud?'L':'H';
+ const steep=!!(p.section.hill&&Math.abs(p.section.hill.angle)>30||target.section.hill&&Math.abs(target.section.hill.angle)>30),mud=body.wheels.some(w=>!w.detached&&(w.mudDepth||0)>.65&&speed<3);
+ const technicalOffroad=offroad&&['ROCK_CRAWL','ROCK_STEPS','MOUNTAIN_PASS','CROSS_AXLE','CHESS_AXLE','EROSION_GULLY','PEAT_BOG','DEEP_MUD','RUT_GAUNTLET','RUT_MAZE','FOREST_FORD','MUD_CLIMB'].includes(target.section.type);
+ const rangeGoal=technicalOffroad||steep||mud?'L':'H';
+ if(offroad){if(body.aiLocks?.center&&!body.state.centerLocked)body.state.pendingCenter=true;if(technicalOffroad&&body.aiLocks?.rear&&!body.state.rearLocked)body.state.pendingRear=true;if(technicalOffroad&&body.aiLocks?.front&&!body.state.frontLocked)body.state.pendingFront=true;}
  if(body.state.transferRange!==rangeGoal){body.state.pendingRange=rangeGoal;if(rangeGoal==='L'){body.state.pendingCenter=true;body.state.pendingRear=true;}return{drive:speed>1.1?-1:0,steer:clamp(steer,-1,1),handbrake:false,targetSpeed:0};}
  body.aiStuckTime=speed<1.5?(body.aiStuckTime||0)+controllerDt:0;
  if(body.aiStuckTime>3&&rotate(body.q,[0,1,0])[1]>.1){const phase=(body.aiStuckTime-3)%6;return{drive:phase<2.4?-1:1,steer:phase<2.4?-.65:.65,handbrake:false,targetSpeed:9};}
- const kmh=speed*3.6,governor=clamp((106-kmh)/6,0,1),bend=curve>.014?.45:curve>.0065?.78:1;
- let drive=speed>targetSpeed+2?-clamp((speed-targetSpeed)*.22,.04,1):Math.min(governor,bend,clamp((targetSpeed-speed)*.3+.65,.1,1));if(kmh>108)drive=-.08;
+ const kmh=speed*3.6,governor=clamp(((offroad?75:106)-kmh)/6,0,1),bend=curve>.014?.45:curve>.0065?.78:1;
+ let drive=speed>targetSpeed+2?-clamp((speed-targetSpeed)*.22,.04,1):Math.min(governor,bend,clamp((targetSpeed-speed)*.3+.65,.1,1));if(kmh>(offroad?76:108))drive=-.08;
  return{drive,steer:clamp(steer,-1,1),handbrake:false,targetSpeed};}
 
 export class RaceProgress{
@@ -38,8 +61,13 @@ export class RaceProgress{
 }
 export class VillageCup{
  constructor(world,player,run,feedback,storage){Object.assign(this,{world,player,run,feedback,storage});this.stats={wins:0,races:0};try{Object.assign(this.stats,JSON.parse(storage?.getItem(RACE_CONFIG.cupKey)||'{}'));}catch{}this.active=false;this.ai=[];}
- start(){this.clear();this.active=true;this.finished=false;this.countdown=RACE_CONFIG.countdown;this.time=0;this.result=null;this.lastMissedGate=null;this.solo=false;this.progress=new RaceProgress(this.world);this.racers=[{id:0,name:'ТЫ',body:this.player,run:this.run,gridPosition:10}];this.progress.reset(this.racers[0]);
- const names=chooseNames(this.world.seed);this.hornSeed=(this.world.seed^0x123abcdef)>>>0;this.nextHorn=0;const emptyTraffic={active:[]};this.actorGrid=new SpatialGrid();this.actorItems=[];this.otherBodies=[];this.progressElapsed=0;for(let i=0;i<RACE_CONFIG.racers-1;i++){const fx=new VehicleFeedback(this.world.seed+i+1),r=new RunState(fx,null);fx.particles.length=90;r.mode=this.run.mode;r.randomFailures=false;r.isAI=true;const trees=new TreeCollisions(this.world,fx),props=new PropCollisions(this.world,fx),pickups=new Pickups(this.world,r,emptyTraffic),gameplay=new GameplayClock(),tickGameplay=(elapsed,body)=>{r.tick(elapsed,body);pickups.tick(elapsed,body);},body=new OffroadVehicle({height:(x,z)=>this.world.height(x,z),normal:(x,z)=>this.world.normal(x,z),surface:(x,z)=>this.world.surface(x,z),grip:(x,z)=>this.world.surface(x,z).longitudinalGrip,afterStep:(dt,b)=>{trees.tick(dt,b);props.tick(dt,b);fx.physicsTick(dt,b);gameplay.step(dt,b,tickGameplay);}},{...CAR_CONFIG,mapLimit:Infinity}),s=CIRCUIT_CONFIG.gridFront-Math.floor(i/2)*CIRCUIT_CONFIG.gridGap,p=this.world.atDistance(s),side=i%2?1:-1;body.reset(p.x+Math.cos(p.yaw)*side*1.6,p.z-Math.sin(p.yaw)*side*1.6,p.yaw);r.body=body;r.mechanical.bind(body,this.world.seed+i*19);r.applyEngine(body);const racer={id:i+1,gridPosition:i+1,name:names[i],body,run:r,feedback:fx,trees,props,gameplay,physicsHz:180,personality:RACE_CONFIG.aiSpeeds[i]/25,color:RACE_CONFIG.colors[i],stuck:0,controllerTime:0};this.progress.reset(racer);this.racers.push(racer);this.ai.push(racer);}
+ start(){this.clear();this.offroadSprint=isOffroadSprint(this.run.mode);this.statsKey=this.offroadSprint?'niva3d.offroadSprintStats.v1':RACE_CONFIG.cupKey;
+ this.stats={wins:0,races:0};try{Object.assign(this.stats,JSON.parse(this.storage?.getItem(this.statsKey)||'{}'));}catch{}
+ this.active=true;this.finished=false;this.countdown=RACE_CONFIG.countdown;this.time=0;this.result=null;this.lastMissedGate=null;this.solo=false;this.progress=new RaceProgress(this.world);this.racers=[{id:0,name:'ТЫ',body:this.player,run:this.run,gridPosition:10}];this.progress.reset(this.racers[0]);
+ const names=chooseNames(this.world.seed);this.hornSeed=(this.world.seed^0x123abcdef)>>>0;this.nextHorn=0;const emptyTraffic={active:[]};this.actorGrid=new SpatialGrid();this.actorItems=[];this.otherBodies=[];this.progressElapsed=0;for(let i=0;i<RACE_CONFIG.racers-1;i++){const fx=new VehicleFeedback(this.world.seed+i+1),r=new RunState(fx,null),upgrade=this.offroadSprint?offroadRivalBuild(this.world.seed,i):null;
+ fx.particles.length=90;r.mode=this.run.mode;r.randomFailures=false;r.isAI=true;if(upgrade){r.garageBuild=upgrade.build;r.expedition.reset(upgrade.build);}const trees=new TreeCollisions(this.world,fx),props=new PropCollisions(this.world,fx),pickups=new Pickups(this.world,r,emptyTraffic),gameplay=new GameplayClock(),tickGameplay=(elapsed,body)=>{r.tick(elapsed,body);pickups.tick(elapsed,body);},body=new OffroadVehicle({height:(x,z)=>this.world.height(x,z),normal:(x,z)=>this.world.normal(x,z),surface:(x,z)=>tireSurface(this.world.surface(x,z),upgrade?.build),grip:(x,z)=>tireSurface(this.world.surface(x,z),upgrade?.build).longitudinalGrip,afterStep:(dt,b)=>{trees.tick(dt,b);props.tick(dt,b);fx.physicsTick(dt,b);gameplay.step(dt,b,tickGameplay);}},{...suspensionConfig(CAR_CONFIG,upgrade?.build),mapLimit:Infinity}),s=CIRCUIT_CONFIG.gridFront-Math.floor(i/2)*CIRCUIT_CONFIG.gridGap,p=this.world.atDistance(s),side=i%2?1:-1;body.reset(p.x+Math.cos(p.yaw)*side*1.6,p.z-Math.sin(p.yaw)*side*1.6,p.yaw);r.body=body;r.mechanical.bind(body,this.world.seed+i*19);
+ if(upgrade){r.expedition.bind(body,this.world);Object.assign(body.state,{offroadMode:true,offroadTires:upgrade.build.tires==='offroad',turboInstalled:upgrade.build.engine==='turbo',rearLockInstalled:true,frontLockInstalled:true,tyrePressure:r.expedition.pressure,centerLocked:upgrade.locks.center,rearLocked:upgrade.locks.rear,frontLocked:upgrade.locks.front});body.aiLocks=upgrade.locks;}
+ r.applyEngine(body);const racer={id:i+1,gridPosition:i+1,name:names[i],body,run:r,feedback:fx,trees,props,gameplay,physicsHz:180,personality:RACE_CONFIG.aiSpeeds[i]/25,color:RACE_CONFIG.colors[i],upgrade,stuck:0,controllerTime:0};this.progress.reset(racer);this.racers.push(racer);this.ai.push(racer);}
  const p=this.world.atDistance(CIRCUIT_CONFIG.gridFront-4*CIRCUIT_CONFIG.gridGap);this.player.reset(p.x+Math.cos(p.yaw)*1.6,p.z-Math.sin(p.yaw)*1.6,p.yaw);this.run.applyEngine(this.player);this.racers[0].previousP=this.player.p.slice();for(const racer of this.racers){this.settle(racer.body);racer.previousP=racer.body.p.slice();racer.body.routeS=this.world.locate(racer.body.p[0],racer.body.p[2]).s;}this.run.distance=0;this.run.fuel=100;this.run.hp=100;
  }
  settle(body){const callback=body.terrain.afterStep;body.terrain.afterStep=()=>{};try{for(let i=0;i<8;i++)body.advance(.05,{drive:0,steer:0,handbrake:true});}finally{body.terrain.afterStep=callback;}body.v=[0,0,0];body.omega=[0,0,0];body.wheels.forEach(w=>w.omega=0);body.state.stepDistance=0;}
@@ -59,7 +87,7 @@ export class VillageCup{
  safePlayer(){} // Racing rescue uses only accepted gates; no arbitrary safe-road shortcut.
 
  position(){if(this.countdown>0)return 10;return [...this.racers].sort((a,b)=>this.progress.score(b)-this.progress.score(a)).findIndex(r=>r.id===0)+1;}
- finish(dnf=false){if(this.finished)return;this.finished=true;const r=this.racers[0];if(dnf)r.dnf=true;this.result={dnf,position:this.position(),time:this.time,bestLap:r.bestLap,mode:this.run.mode,distance:this.world.raceLength||null};this.stats.races++;if(!dnf&&this.result.position===1)this.stats.wins++;try{this.storage?.setItem(RACE_CONFIG.cupKey,JSON.stringify(this.stats));}catch{}this.run.ended=true;this.run.applyEngine(this.player);this.player.v=[0,0,0];this.player.omega=[0,0,0];this.player.state.vehicleSpeed=0;this.player.wheels.forEach(w=>w.omega=0);this.feedback.emit('CUP_END',this.result);}
+ finish(dnf=false){if(this.finished)return;this.finished=true;const r=this.racers[0];if(dnf)r.dnf=true;this.result={dnf,position:this.position(),time:this.time,bestLap:r.bestLap,mode:this.run.mode,distance:this.world.raceLength||null};this.stats.races++;if(!dnf&&this.result.position===1)this.stats.wins++;try{this.storage?.setItem(this.statsKey||RACE_CONFIG.cupKey,JSON.stringify(this.stats));}catch{}this.run.ended=true;this.run.applyEngine(this.player);this.player.v=[0,0,0];this.player.omega=[0,0,0];this.player.state.vehicleSpeed=0;this.player.wheels.forEach(w=>w.omega=0);this.feedback.emit('CUP_END',this.result);}
 }
 
 // Start lock isolates chassis motion, not engine input. Normal on-track physics is unchanged.

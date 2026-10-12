@@ -1,7 +1,7 @@
 {
   "name": "derevnya-rally",
   "private": true,
-  "version": "0.67.0",
+  "version": "0.70.0",
   "type": "module",
   "scripts": {
     "test": "node --test tests/*.test.mjs"

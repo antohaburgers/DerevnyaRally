@@ -117,7 +117,7 @@ export class ExpeditionSystems{
    }
   }
   const dirty=w.reduce((v,x)=>v+(['MUD','PEAT','SOFT_DIRT'].includes(x.surfaceType)&&x.contact?1:0),0)/4;
-  const wetWheel=w.reduce((n,x)=>n+(x.contact&&(x.surfaceType==='MUD'||x.surfaceType==='PEAT'||x.surfaceType==='WATER'||(x.surfaceType==='SOFT_DIRT'&&(x.surface?.wetness||0)>.2))?1:0),0)/4;
+  const wetWheel=w.reduce((n,x)=>n+(x.contact&&(x.surfaceType==='MUD'||x.surfaceType==='PEAT'||(x.surfaceType==='SOFT_DIRT'&&(x.surface?.wetness||0)>.2))?1:0),0)/4;
   const slip=Math.min(1.6,Math.max(0,...w.map(x=>Math.abs(x.slipRatio||0))));
   const spray=Math.min(2.6,.42+speed/32+slip*.72)*wetWheel;
   this.mudZones[0]=Math.min(1,this.mudZones[0]+dt*.042*(dirty+spray*.85));

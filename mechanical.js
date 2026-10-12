@@ -1,5 +1,5 @@
 import {rotate} from './physics.js?v=051';
-export const MECHANICAL_CONFIG={minMechanicalDamage:10,failureChance:[.04,.12,.24],wheelDetachChance:[.01,.025,.07],damageBands:[20,35],maxDetachedWheels:1,wheelLife:4,debrisPool:4,landingMinDamage:20,randomFailureSpacing:100,randomFailureChance:1/60,randomFailureWeights:{FRONT_DRIVE_FAILURE:.40,REAR_DRIVE_FAILURE:.40,WHEEL_DETACHED:.20},bodyPartMinDamage:8,partLife:11,partPool:6,lockWarningWear:60,lockDangerWear:82,lockSurpriseChancePerSecond:.00011};
+export const MECHANICAL_CONFIG={minMechanicalDamage:10,failureChance:[.025,.065,.12],wheelDetachChance:[.006,.012,.03],damageBands:[20,35],maxDetachedWheels:1,wheelLife:4,debrisPool:4,landingMinDamage:20,randomFailureSpacing:100,randomFailureChance:1/165,randomFailureWeights:{FRONT_DRIVE_FAILURE:.40,REAR_DRIVE_FAILURE:.40,WHEEL_DETACHED:.20},bodyPartMinDamage:12,partLife:11,partPool:6,lockWarningWear:60,lockDangerWear:82,lockSurpriseChancePerSecond:.000022};
 const eligible=new Set(['TREE_HIT','HOUSE_HIT','TRAFFIC_HIT','COW_HIT','ROLLOVER_IMPACT','HARD_LANDING']);
 export class MechanicalDamage{
  constructor(feedback){this.feedback=feedback;this.body=null;this.debris=Array.from({length:MECHANICAL_CONFIG.debrisPool},()=>({active:false}));this.partDebris=Array.from({length:MECHANICAL_CONFIG.partPool},()=>({active:false}));this.reset();}
@@ -23,11 +23,11 @@ export class MechanicalDamage{
   const local=rotate([-q[0],-q[1],-q[2],q[3]],pos.map((x,i)=>x-this.body.p[i]));
   const front=local[2]>-.35,side=local[0]>=0?'fogRight':'fogLeft',bumper=front?'frontBumper':'rearBumper';
   const impact=Math.max(0,event.impulse||0),build=this.build||{};
-  const chance=Math.min(.94,Math.max(0,(damage-8)*.022+impact/320000));
+  const chance=Math.min(.94,Math.max(0,(damage-12)*.012+impact/460000));
   let changed=false;
   if(this.parts[bumper]&&this.random()<chance)changed=this.detachPart(bumper,event)||changed;
   if(front&&build.fogLights&&this.parts[side]){
-   const lightChance=Math.min(.94,Math.max(0,(damage-5)*.031+impact/240000));
+   const lightChance=Math.min(.94,Math.max(0,(damage-8)*.018+impact/380000));
    if(this.random()<lightChance)changed=this.detachPart(side,event)||changed;
   }
   return changed;
@@ -59,11 +59,11 @@ export class MechanicalDamage{
   this.apply();return true;
  }
  shockLocks(type,damage,event={}){
-  if(!this.body||!eligible.has(type)||damage<22)return;
+  if(!this.body||!eligible.has(type)||damage<31)return;
   const s=this.body.state;
   for(const lock of ['front','rear','center']){
    if(this.lockFaults[lock]||!s[lock+'Locked'])continue;
-   const chance=Math.min(.19,.018+(damage-22)*.0020+this.lockWear[lock]*.00055);
+   const chance=Math.min(.075,.004+(damage-31)*.0007+this.lockWear[lock]*.00025);
    if(this.random()<chance){this.failLock(lock,event);break;}
   }
  }
@@ -82,7 +82,7 @@ export class MechanicalDamage{
      Math.abs(((w[0]?.omega||0)+(w[1]?.omega||0)-(w[2]?.omega||0)-(w[3]?.omega||0))*.5);
    const stress=throttle*(.23+.70*slip)+Math.min(2.1,diff/11)*.44+
      (lock==='front'?turn*.9:lock==='rear'?turn*.48:turn*.72);
-   const rate=.016+Math.pow(stress,1.8)*.43;
+   const rate=.006+Math.pow(stress,1.8)*.16;
    const wear=this.lockWear[lock]=Math.min(100,this.lockWear[lock]+dt*rate);
    const stage=wear>=MECHANICAL_CONFIG.lockDangerWear?2:wear>=MECHANICAL_CONFIG.lockWarningWear?1:0;
    if(stage>this.warned[lock]){
@@ -90,7 +90,7 @@ export class MechanicalDamage{
     this.feedback.emit(stage===2?'LOCK_CRITICAL':'LOCK_WARNING',{lock,wear,position:this.body.p.slice()});
    }
    if(wear>=100){this.failLock(lock);continue;}
-   const chance=wear>72?dt*(.0008+Math.pow((wear-72)/28,2)*.095):0;
+   const chance=wear>72?dt*(.0002+Math.pow((wear-72)/28,2)*.028):0;
    const surprise=stress>1.1?dt*MECHANICAL_CONFIG.lockSurpriseChancePerSecond:0;
    if(this.random()<chance+surprise)this.failLock(lock,{randomFailure:wear<=72});
   }

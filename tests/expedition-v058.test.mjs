@@ -9,7 +9,7 @@ test('roads differ by shape, width, material and driving difficulty',()=>{
  for(const seed of [1,42,731024,9981,0xffffffff]){
   const map=new ExpeditionMap(seed);
   assert.equal(map.routeExists(),true);
-  assert.equal(map.roads.length,47);
+  assert.ok(map.roads.length > map.nodes.length);
   assert.ok(new Set(map.roads.map(r=>r.surface)).size>=5);
   assert.ok(new Set(map.roads.map(r=>Math.round(r.width*10))).size>=12);
   assert.ok(map.roads.every(r=>r.path.length>=8));

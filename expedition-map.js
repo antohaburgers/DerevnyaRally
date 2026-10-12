@@ -75,137 +75,94 @@ export class ExpeditionMap {
   }
 
   riverDepth(x, z) {
-    const r = this.river(x);
-    const span = Math.abs(z - r.center);
-    if (span >= r.halfWidth) return 0;
-    const profile = Math.max(0, 1 - sq(span / r.halfWidth));
-    const shallow = Math.abs(x + 770) < 125 || Math.abs(x - 810) < 115;
-    return profile * (shallow ? 0.42 : 1.35);
+    const r=this.river(x), t=Math.abs(z-r.center)/r.halfWidth;
+    if(t>=1)return 0;
+    // Smooth ford transitions, never a vertical wall at a portal edge.
+    const shallow=Math.exp(-sq((x+770)/100)),deep=Math.exp(-sq((x-80)/95));
+    return (1-t*t)*(1.55-1.13*shallow-.83*deep);
   }
 
-  baseHeight(x, z) {
-    const north = clamp((2700 - z) / 5500, 0, 1);
-    const rolling = (noise(x, z, 450, this.seed ^ 81) - 0.5) * 10
-      + (noise(x, z, 115, this.seed ^ 82) - 0.5) * 2.5;
-    const valley = Math.max(0, 1 - Math.abs(z - this.river(x).center) / 170);
-    return north * 7 + rolling - valley * 3.5 - this.riverDepth(x, z) * 0.8;
+  baseHeight(x,z) {
+    const progress=clamp((2700-z)/5500,0,1);
+    const hills=(noise(x,z,420,this.seed^81)-.5)*(12+progress*24)
+      +(noise(x,z,110,this.seed^82)-.5)*(2+progress*5);
+    const valley=smooth(clamp(Math.abs(z-this.river(x).center)/190,0,1));
+    return 3+hills*valley;
   }
 
-  terrainHeight(x, z) {
-    const base = this.baseHeight(x, z), depth = this.riverDepth(x, z);
-    if (depth > .01 && this.roads?.length) {
-      const road = this.roadAt(x, z);
-      if (road?.road.kind === 'bridge') {
-        const influence = clamp(1 - road.distance / (road.road.width / 2 + 7), 0, 1);
-        return base + depth * 1.7 * smooth(influence);
+  terrainHeight(x,z) {
+    const r=this.river(x), depth=this.riverDepth(x,z), road=this.roadAt(x,z);
+    const span=Math.abs(z-r.center), bank=smooth(clamp((span-r.halfWidth)/18,0,1));
+    let h=depth>0?3-depth:3+(this.baseHeight(x,z)-3)*bank;
+    if(road) {
+      const influence=smooth(clamp((road.road.width/2+2-road.distance)/2,0,1));
+      const progress=road.road.difficulty/4, type=road.road.surface;
+      const junction=Math.min(...this.nodes.filter(n=>Math.abs(n.x-x)<15&&Math.abs(n.z-z)<15).map(n=>Math.hypot(n.x-x,n.z-z)),15);
+      const fade=smooth(clamp((junction-4)/9,0,1))*influence;
+      const lat=road.lateral;
+      if(['rutted','muddy','abandoned'].includes(type)) {
+        const rut=Math.exp(-sq((Math.abs(lat)-.8)/.34));
+        h-=rut*(.10+progress*.27)*fade;
+        h+=.06*Math.sin(x*.24+z*.34)*fade;
+      }
+      if(type==='rocky')h+=fade*(.16+progress*.24)*(Math.sin(x*1.3+z*.65)*.5+Math.cos(z*1.8-x*.5)*.4);
+      if(type==='forest')h+=.07*Math.sin(z*1.6+x*.8)*fade;
+      if(type==='bridge'&&span<r.halfWidth+28&&Math.abs(lat)<road.road.width/2+1.2) {
+        const ramp=smooth(clamp((r.halfWidth+28-span)/20,0,1));
+        h=h*(1-ramp)+3.45*ramp;
       }
     }
-    return base;
+    // Soft hillside around the finite play area; no clamping to a road corridor.
+    const edge=Math.max(Math.abs(x)-1470,Math.abs(z)-2970,0);
+    return h+Math.min(80,edge*edge*.008);
   }
 
-  // Fixed road graph: three winding north-south routes joined by crossroads.
-  // All positions follow map coordinates, not the order in which tiles are visited.
   generateNetwork() {
-    const rows = [2670, 2130, 1600, 1070, 520, -100, -650, -1190, -1740, -2250, -2720];
-    const lanes = [-920, 0, 910];
-    const nodeRows = [];
-    for (let row = 0; row < rows.length; row++) {
-      const r = [];
-      for (let lane = 0; lane < lanes.length; lane++) {
-        const x = lanes[lane] + (hash(row, lane, this.seed ^ 93) - 0.5) * (lane === 1 ? 165 : 115);
-        const z = rows[row] + (hash(lane, row, this.seed ^ 39) - 0.5) * 100;
-        const node = { id: this.nodes.length, x, z, row, lane };
-        this.nodes.push(node);
-        r.push(node.id);
+    const random=rng(this.seed^93);
+    const add=(x,z,jitter=80)=>{const n={id:this.nodes.length,x:x+(random()-.5)*jitter,z:z+(random()-.5)*jitter};this.nodes.push(n);return n.id;};
+    const start=add(-180,2700),v1=add(300,2180),hub=add(-120,1480),east=add(1090,870);
+    const bridgeN=add(1200,this.river(1200).center+145,0),bridgeS=add(1200,this.river(1200).center-145,0);
+    const v2=add(950,-610),south=add(650,-1390),hubS=add(-260,-2090),goal=add(100,-2730);
+    const tires=add(-880,2250),west=add(-1100,1470),suspension=add(-590,1120);
+    const winch=add(640,1640),snorkel=add(-100,680),fordN=add(-770,this.river(-770).center+125,0),fordS=add(-770,this.river(-770).center-125,0);
+    const deepN=add(80,this.river(80).center+130,0),deepS=add(80,this.river(80).center-130,0);
+    const repair=add(-1050,-800),forest=add(-650,-1530),rock=add(170,-1140),fuel=add(1120,-2170);
+    const dead1=add(1100,2460),dead2=add(-1280,850),dead3=add(-1220,-2450),dead4=add(1300,-1430);
+    const branch=add(750,2550),bog=add(-1150,-220),ridge=add(1180,-2730),mill=add(170,-1850);
+    const join=(ia,ib,surface='country',kind='road')=>{
+      const a=this.nodes[ia],b=this.nodes[ib],id=this.roads.length;
+      const dx=b.x-a.x,dz=b.z-a.z,L=Math.hypot(dx,dz),nx=-dz/L,nz=dx/L;
+      const widths={gravel:8.2,country:6.7,forest:3.3,rutted:3.9,muddy:5.3,rocky:4.5,abandoned:3.5,bridge:6.0,ford:5.0};
+      const winding={gravel:.035,country:.08,forest:.19,rutted:.13,muddy:.10,rocky:.15,abandoned:.21,bridge:0,ford:0}[surface];
+      const controls=[a];
+      for(let j=1;j<5;j++){const t=j/5,bend=(random()-.5)*2*L*winding*Math.sin(Math.PI*t);controls.push({x:a.x+dx*t+nx*bend,z:a.z+dz*t+nz*bend});}controls.push(b);
+      const path=[a];
+      for(let i=0;i<controls.length-1;i++){
+        const p0=controls[Math.max(0,i-1)],p1=controls[i],p2=controls[i+1],p3=controls[Math.min(controls.length-1,i+2)];
+        const steps=Math.max(3,Math.ceil(distance(p1,p2)/8));
+        for(let j=1;j<=steps;j++){const t=j/steps,t2=t*t,t3=t2*t,cat=k=>.5*(2*p1[k]+(p2[k]-p0[k])*t+(2*p0[k]-5*p1[k]+4*p2[k]-p3[k])*t2+(-p0[k]+3*p1[k]-3*p2[k]+p3[k])*t3);path.push(j===steps&&i===controls.length-2?b:{x:cat('x'),z:cat('z')});}
       }
-      nodeRows.push(r);
-    }
-    const join = (ia, ib, kind = 'road') => {
-      const a = this.nodes[ia], b = this.nodes[ib], id = this.roads.length;
-      const dx = b.x - a.x, dz = b.z - a.z, length = Math.hypot(dx, dz) || 1;
-      const nx = -dz / length, nz = dx / length;
-      const random = rng((this.seed ^ Math.imul(id + 1, 2246822519)) >>> 0);
-      const northProgress = clamp((2700 - Math.min(a.z, b.z)) / 5500, 0, 1);
-      const types = ['gravel', 'country', 'forest', 'rutted', 'muddy', 'rocky'];
-      let surface = types[Math.floor(random() * types.length)];
-      if (kind === 'bridge') surface = 'bridge';
-      if (kind === 'ford' || kind === 'deep-ford') surface = 'ford';
-      // Explicit visual / physics distinctions: a narrow trail is not just a recoloured road.
-      const widths = { gravel: 7.4, country: 6.2, forest: 4.6, rutted: 4.2, muddy: 5.1, rocky: 4.8, bridge: 5.9, ford: 5.0 };
-      const width = widths[surface] * (0.90 + random() * 0.2);
-      const winding = {gravel: .10, country: .16, forest: .30, rutted: .22, muddy: .25, rocky: .31, bridge: .09, ford: .13}[surface];
-      const control = [a];
-      for (let j = 1; j <= 4; j++) {
-        const t = j / 5;
-        const bend = (random() - .5) * 2 * length * winding * Math.sin(Math.PI * t);
-        control.push({ x: a.x + dx * t + nx * bend, z: a.z + dz * t + nz * bend });
-      }
-      control.push(b);
-      const path = [a];
-      // Interpolated curved polyline (not three identical straight strokes).
-      for (let i = 0; i < control.length - 1; i++) {
-        const p0 = control[Math.max(0, i - 1)], p1 = control[i];
-        const p2 = control[i + 1], p3 = control[Math.min(control.length - 1, i + 2)];
-        const steps = Math.max(3, Math.ceil(Math.hypot(p2.x - p1.x, p2.z - p1.z) / 20));
-        for (let j = 1; j <= steps; j++) {
-          const t = j / steps, t2 = t * t, t3 = t2 * t;
-          const cat = key => .5 * ((2 * p1[key]) + (p2[key] - p0[key]) * t +
-            (2 * p0[key] - 5 * p1[key] + 4 * p2[key] - p3[key]) * t2 +
-            (-p0[key] + 3 * p1[key] - 3 * p2[key] + p3[key]) * t3);
-          path.push(j === steps && i === control.length - 2 ? b : {x: cat('x'), z: cat('z')});
-        }
-      }
-      const road = {
-        id, from: ia, to: ib, kind, surface, path, width,
-        difficulty: Math.min(4, Math.floor(northProgress * 5)),
-        length: path.slice(1).reduce((sum, p, i) => sum + distance(path[i], p), 0)
-      };
+      const road={id,from:ia,to:ib,kind,surface,path,width:widths[surface]*(.94+random()*.12),difficulty:Math.min(4,Math.floor(clamp((2700-Math.min(a.z,b.z))/5500,0,1)*5)),length:path.slice(1).reduce((n,p,i)=>n+distance(path[i],p),0)};
       this.roads.push(road);
-      for (let part = 0; part < path.length - 1; part++) {
-        const p = path[part], q = path[part + 1];
-        const segment = { road, a: p, b: q, part };
-        const pad = this.config.tileSize;
-        const minX = Math.floor((Math.min(p.x, q.x) - pad) / pad);
-        const maxX = Math.floor((Math.max(p.x, q.x) + pad) / pad);
-        const minZ = Math.floor((Math.min(p.z, q.z) - pad) / pad);
-        const maxZ = Math.floor((Math.max(p.z, q.z) + pad) / pad);
-        for (let cx = minX; cx <= maxX; cx++) for (let cz = minZ; cz <= maxZ; cz++) {
-          const key = cx + ':' + cz;
-          if (!this.segmentBins.has(key)) this.segmentBins.set(key, []);
-          this.segmentBins.get(key).push(segment);
+      for(let i=0;i<path.length-1;i++){
+        const a=path[i],b=path[i+1],segment={road,a,b,part:i},pad=24,size=this.config.tileSize;
+        for(let cx=Math.floor((Math.min(a.x,b.x)-pad)/size);cx<=Math.floor((Math.max(a.x,b.x)+pad)/size);cx++)for(let cz=Math.floor((Math.min(a.z,b.z)-pad)/size);cz<=Math.floor((Math.max(a.z,b.z)+pad)/size);cz++){
+          const key=cx+':'+cz;if(!this.segmentBins.has(key))this.segmentBins.set(key,[]);this.segmentBins.get(key).push(segment);
         }
       }
     };
-    for (let row = 0; row < rows.length - 1; row++) for (let lane = 0; lane < 3; lane++) {
-      const a = nodeRows[row][lane], b = nodeRows[row + 1][lane];
-      const r0 = this.nodes[a], r1 = this.nodes[b];
-      const crossing = (r0.z - this.river(r0.x).center) * (r1.z - this.river(r1.x).center) <= 0;
-      join(a, b, crossing ? (lane === 0 ? 'ford' : lane === 1 ? 'deep-ford' : 'bridge') : 'road');
-    }
-    for (const row of [0, 2, 3, 5, 7, 8, 10]) for (let lane = 0; lane < 2; lane++)
-      join(nodeRows[row][lane], nodeRows[row][lane + 1], 'crossroad');
-    // Looping detours between columns: a route is never just one corridor.
-    join(nodeRows[1][0], nodeRows[2][1], 'detour');
-    join(nodeRows[5][1], nodeRows[6][2], 'detour');
-    join(nodeRows[8][0], nodeRows[9][1], 'detour');
-    this.start = { ...this.nodes[nodeRows[0][1]] };
-    this.goal = { ...this.nodes[nodeRows[10][1]] };
+    // A long firm east-bank route, short west ford, and technical centre loop.
+    for(const [a,b] of [[start,v1],[v1,hub],[hub,east],[east,bridgeN],[bridgeS,v2],[v2,south],[south,fuel],[fuel,ridge],[ridge,goal]])join(a,b,'gravel');
+    join(bridgeN,bridgeS,'bridge','bridge');
+    for(const [a,b,type] of [[start,tires,'country'],[tires,west,'forest'],[west,suspension,'rutted'],[suspension,hub,'country'],[hub,winch,'country'],[winch,east,'forest'],[hub,snorkel,'rutted'],[snorkel,fordN,'muddy'],[west,fordN,'forest'],[fordS,repair,'muddy'],[repair,forest,'rutted'],[forest,hubS,'rocky'],[hubS,goal,'country'],[bridgeS,rock,'rocky'],[rock,south,'rutted'],[rock,hubS,'muddy'],[snorkel,deepN,'rocky'],[deepS,rock,'rocky'],[deepS,repair,'muddy'],[v1,branch,'country'],[branch,dead1,'abandoned'],[branch,winch,'forest'],[suspension,dead2,'abandoned'],[hubS,dead3,'abandoned'],[south,dead4,'abandoned'],[fordS,bog,'muddy'],[bog,repair,'rutted'],[hubS,mill,'forest'],[mill,fuel,'rutted']])join(a,b,type);
+    join(fordN,fordS,'ford','ford');join(deepN,deepS,'ford','deep-ford');
+    this.start={...this.nodes[start]};this.goal={...this.nodes[goal]};
+    this.poiNodes={start,goal,tires,winch,suspension,snorkel,repair,fuel,v1,v2,mill,dead1,dead3};
   }
 
   generateLandmarks() {
-    const p = (id, kind, nodeId, label, upgrade = null) => ({
-      id, kind, label, upgrade, x: this.nodes[nodeId].x, z: this.nodes[nodeId].z
-    });
-    const at = (row, lane) => this.nodes.find(n => n.row === row && n.lane === lane).id;
-    this.landmarks = [
-      p('start', 'depot', at(0, 1), 'СКЛАД ПИВА'),
-      p('tires', 'upgrade', at(1, 0), 'ШИНОМОНТАЖ', 'tires'),
-      p('winch', 'upgrade', at(3, 2), 'ЛЕСОПИЛКА', 'winch'),
-      p('snorkel', 'upgrade', at(4, 1), 'СТАРЫЙ ГАРАЖ', 'snorkel'),
-      p('repair', 'service', at(6, 0), 'РЕМОНТНАЯ БАЗА'),
-      p('fuel', 'service', at(8, 2), 'ЗАПРАВКА'),
-      p('goal', 'delivery', at(10, 1), 'ДЕРЕВНЯ БУХАЛОВО')
-    ];
+    const p=(id,kind,node,label,upgrade=null)=>({id,kind,label,upgrade,...{x:this.nodes[node].x,z:this.nodes[node].z,nodeId:node}}),n=this.poiNodes;
+    this.landmarks=[p('start','depot',n.start,'СКЛАД ПИВА'),p('tires','upgrade',n.tires,'ШИНОМОНТАЖ','tires'),p('winch','upgrade',n.winch,'ЛЕСОПИЛКА','winch'),p('suspension','upgrade',n.suspension,'УСИЛЕННАЯ ПОДВЕСКА','suspension'),p('snorkel','upgrade',n.snorkel,'СТАРЫЙ ГАРАЖ','snorkel'),p('repair','service',n.repair,'РЕМОНТНАЯ БАЗА'),p('fuel','service',n.fuel,'ЗАПРАВКА'),p('village1','village',n.v1,'МАЛЫЕ ПЕНЬКИ'),p('village2','village',n.v2,'ГЛУХОМАНЬ'),p('mill','service',n.mill,'ЛЕСНАЯ МАСТЕРСКАЯ'),p('goal','delivery',n.goal,'ДЕРЕВНЯ БУХАЛОВО')];
   }
 
   // 2D spatial search: nearby road segments only, not all roads on the map.
@@ -217,7 +174,8 @@ export class ExpeditionMap {
       const pt = pointSegment(x, z, segment.a, segment.b);
       if (!nearest || pt.distance < nearest.distance) {
         nearest = { ...pt, road: segment.road,
-          yaw: Math.atan2(segment.b.x - segment.a.x, segment.b.z - segment.a.z) };
+          yaw: Math.atan2(segment.b.x - segment.a.x, segment.b.z - segment.a.z),
+          lateral:(x-pt.x)*Math.cos(Math.atan2(segment.b.x-segment.a.x,segment.b.z-segment.a.z))-(z-pt.z)*Math.sin(Math.atan2(segment.b.x-segment.a.x,segment.b.z-segment.a.z)) };
       }
     }
     return nearest;
@@ -240,18 +198,19 @@ export class ExpeditionMap {
     const mild = noise(x, z, 38, this.seed ^ 533);
     const strips = Math.sin(x * .71 + z * .42);
     let surfaceType = 'GRASS', mudDepth = 0;
-    if (biome === 'BOG') { surfaceType = 'PEAT'; mudDepth = .46; }
+    if (biome === 'BOG' && z<1200) { surfaceType = 'PEAT'; mudDepth = .46; }
     if (onRoad) {
       if (roadType === 'gravel') surfaceType = 'DIRT';
       else if (roadType === 'rocky') surfaceType = strips > -.2 ? 'ROCK' : 'DIRT';
       else if (roadType === 'forest') surfaceType = 'SOFT_DIRT';
+      else if (roadType === 'abandoned') { surfaceType='GRASS';mudDepth=.1; }
       else if (roadType === 'rutted') { surfaceType = 'SOFT_DIRT'; mudDepth = .20 + .17 * mild; }
       else if (roadType === 'muddy') { surfaceType = 'MUD'; mudDepth = .28 + mild * .44; }
       else if (roadType === 'bridge') surfaceType = 'DIRT';
       else surfaceType = mild > .62 && p > 1 ? 'MUD' : 'DIRT';
       if (surfaceType === 'MUD') mudDepth = Math.max(mudDepth, .16 + mild * (.3 + .13 * p));
     }
-    const onBridge = onRoad && roadType === 'bridge';
+    const onBridge = onRoad && roadType === 'bridge' && Math.abs(z-this.river(x).center)<this.river(x).halfWidth+28;
     if (waterDepth > 0 && !onBridge) {
       surfaceType = 'WATER';
       mudDepth = Math.max(mudDepth, waterDepth * .28);
@@ -271,14 +230,14 @@ export class ExpeditionMap {
     const biome = this.biomeAt(center.x, center.z);
     const terrain = [];
     // One 9x9 height grid for chunk rendering. Physics samples terrainHeight directly.
-    for (let row = 0; row <= 8; row++) {
+    for (let row = 0; row <= (this.config.plannerOnly ? -1 : 8); row++) {
       const values = [];
       for (let col = 0; col <= 8; col++)
         values.push(this.terrainHeight(x0 + col * size / 8, z0 + row * size / 8));
       terrain.push(values);
     }
     const foliage = [];
-    const count = biome === 'FOREST' ? 36 : biome === 'FIELD' ? 10 : biome === 'BOG' ? 13 : 5;
+    const count = this.config.plannerOnly ? 0 : biome === 'FOREST' ? 36 : biome === 'FIELD' ? 10 : biome === 'BOG' ? 13 : 5;
     for (let i = 0; i < count; i++) {
       const x = x0 + random() * size, z = z0 + random() * size;
       const nearRoad = this.roadAt(x, z);
@@ -308,11 +267,11 @@ export class ExpeditionMap {
     for (let dz = -radius; dz <= radius; dz++) for (let dx = -radius; dx <= radius; dx++) {
       const tx = cx + dx, tz = cz + dz;
       const centerX = (tx + .5) * s, centerZ = (tz + .5) * s;
-      if (!this.bounds(centerX, centerZ)) continue;
+      if (Math.abs(centerX)>this.config.width/2+s/2||Math.abs(centerZ)>this.config.length/2+s/2) continue;
       const key = tx + ':' + tz;
       desired.add(key);
       active.push(this.tileAt(tx, tz));
-      this.discovered.add(key);
+      if(Math.hypot(dx,dz)<=1.5)this.discovered.add(key);
     }
     for (const key of this.tiles.keys()) if (!desired.has(key)) this.tiles.delete(key);
     this.activeTiles = active;

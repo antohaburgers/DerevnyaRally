@@ -83,12 +83,24 @@ export class ExpeditionMap {
     return profile * (shallow ? 0.42 : 1.35);
   }
 
-  terrainHeight(x, z) {
+  baseHeight(x, z) {
     const north = clamp((2700 - z) / 5500, 0, 1);
     const rolling = (noise(x, z, 450, this.seed ^ 81) - 0.5) * 10
       + (noise(x, z, 115, this.seed ^ 82) - 0.5) * 2.5;
     const valley = Math.max(0, 1 - Math.abs(z - this.river(x).center) / 170);
     return north * 7 + rolling - valley * 3.5 - this.riverDepth(x, z) * 0.8;
+  }
+
+  terrainHeight(x, z) {
+    const base = this.baseHeight(x, z), depth = this.riverDepth(x, z);
+    if (depth > .01 && this.roads?.length) {
+      const road = this.roadAt(x, z);
+      if (road?.road.kind === 'bridge') {
+        const influence = clamp(1 - road.distance / (road.road.width / 2 + 7), 0, 1);
+        return base + depth * 1.7 * smooth(influence);
+      }
+    }
+    return base;
   }
 
   // Fixed road graph: three winding north-south routes joined by crossroads.

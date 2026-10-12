@@ -55,7 +55,7 @@ export function loadBuild(storage){try{return normalizeBuild(JSON.parse(storage?
 export function saveBuild(storage,value){const b=normalizeBuild(value);try{storage?.setItem(GARAGE_KEY,JSON.stringify(b));}catch{}return b;}
 export function tireSurface(surface,b){
  if(b?.tires!=='offroad')return surface;
- const values={ASPHALT:[.92,.96,1.1],DIRT:[1.13,1.10,.99],SOFT_DIRT:[1.22,1.15,.88],MUD:[1.30,1.22,.82],WATER:[1.26,1.17,.85],GRASS:[1.12,1.11,.97],ROCK:[1.08,1.08,1]};
+ const values={ASPHALT:[.92,.96,1.1],DIRT:[1.13,1.10,.99],SOFT_DIRT:[1.22,1.15,.88],MUD:[1.30,1.22,.82],WATER:[1.26,1.17,.85],GRASS:[1.12,1.11,.97],ROCK:[1.08,1.08,.94]};
  const m=values[surface.surfaceType]||[1,1,1];
  return{...surface,longitudinalGrip:surface.longitudinalGrip*m[0],lateralGrip:surface.lateralGrip*m[1],rollingResistance:surface.rollingResistance*m[2]};
 }

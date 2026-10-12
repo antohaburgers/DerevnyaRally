@@ -31,3 +31,16 @@ test('switching from expedition back to every original mode keeps the same physi
   if(mode==='CIRCUIT'||mode.startsWith('SPRINT'))assert.equal(game.cup.ai.length,9);
  }
 });
+test('stadium keeps original car, delays start, counts real contacts and preserves dirty finale',()=>{
+ const body=game.physics,visual=game.visual;game.startRun('SLAUGHTER');const a=game.stadium;
+ assert.equal(game.physics,body);assert.equal(game.visual,visual);assert.equal(game.world.arena,true);assert.equal(game.animals.active.length,5);assert.equal(game.raceDecor.spectators.length,42);assert.equal(game.cup.ai.length,0);assert.equal(game.environment.hour,15);assert.equal(game.environment.rainIntensity,0);assert.equal(a.time,0);
+ a.before(5,1);assert.equal(a.phase,'intro');assert.equal(a.time,0);a.before(1,1);a.before(3,1);assert.equal(a.phase,'playing');assert.equal(game.physics.state.startLock,false);
+ const cow=game.animals.active[0];Object.assign(cow,{x:body.p[0],y:game.height(body.p[0],body.p[2]),z:body.p[2]+1.7,rotation:Math.PI});body.v=[0,0,12];game.animals.tick(.025,body);
+ assert.equal(a.cows,1);assert.equal(a.score,100);assert.ok(a.redZones[0]>a.redZones[1]);assert.ok(game.run.hp>95);assert.ok(game.animals.debris.some(d=>d.active));game.animals.tick(.025,body);assert.equal(a.cows,1);
+ a.tick(.7);assert.equal(game.animals.active.length,5);for(let i=0;i<5;i++){const cow=game.animals.active[0];a.hit(cow,{closing:12,impulse:2000},[body.p[0]-1,body.p[1],body.p[2]]);a.spawn();}assert.equal(a.combo,5);assert.equal(a.bestCombo,5);a.tick(3.1);assert.equal(a.combo,1);
+ body.p[0]=90;body.p[2]=0;const hp=game.run.hp,red=[...a.redZones];a.boundary(3);assert.ok(game.world.radius(body.p[0],body.p[2])<1);assert.equal(game.run.hp,hp);assert.deepEqual(a.redZones,red);
+ for(let i=0;i<1300&&a.phase==='playing';i++)a.tick(.05);assert.equal(a.time,60);assert.equal(a.phase,'outro');assert.equal(game.run.ended,false);assert.deepEqual(a.redZones,red);a.before(4,0);assert.equal(a.phase,'outro');a.before(1,0);assert.equal(a.phase,'results');frame(3000);assert.equal(el('#result-title').textContent,'КОРОВЫ УНИЧТОЖЕНЫ!');assert.equal(el('#run-results').hidden,false);
+ game.startRun('SLAUGHTER');game.stadium.before(6,0);game.stadium.before(3,0);game.stadium.time=45;for(let i=0;i<10;i++)game.stadium.tick(.05);assert.equal(game.animals.active.length,8);game.stadium.redZones.fill(2.4);game.run.expedition.mudZones.fill(1);for(let i=0;i<8;i++)game.feedback.burst(game.physics.p,[0,0,0],90,'antifreeze');frame(3100);assert.ok(game.profiler.drawCalls<1000);assert.ok(game.feedback.activeParticles<=540);
+ const count=game.chunkSlots.size;for(let i=0;i<6;i++){game.startRun('SLAUGHTER');assert.equal(game.animals.active.length,5);assert.equal(game.raceDecor.spectators.length,42);assert.ok(game.stadium.redZones.every(v=>v===0));assert.equal(game.run.hp,100);assert.equal(game.chunkSlots.size,count);assert.ok(game.physics.wheels.every(w=>!w.detached));}
+ game.showMenu();assert.equal(game.stadium,null);assert.equal(game.animals.stadium,null);assert.equal(game.music.suspended,true);game.startRun('OFFROAD');assert.equal(game.world.arena,undefined);assert.equal(game.animals.stadium,null);
+});

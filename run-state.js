@@ -14,7 +14,7 @@ export class RunState{
  get message(){this.messages=this.messages.filter(m=>m.until>this.time);return (this.messages.find(m=>m.text==='БАЛДЁЖ')||this.messages.at(-1))?.text||'';}
  bestFor(mode='ENDLESS'){const key=mode==='OFFROAD'?'niva3d.bestOffroadMeters.v1':RUN_CONFIG.bestKey;try{const value=Number(this.storage?.getItem(key));return Number.isFinite(value)&&value>=0&&value<1e9?value:0;}catch{return 0;}}
  setMode(mode){this.mode=mode;this.recordKey=mode==='OFFROAD'?'niva3d.bestOffroadMeters.v1':RUN_CONFIG.bestKey;this.best=this.bestFor(mode);}
- save(){try{this.storage?.setItem(this.recordKey||RUN_CONFIG.bestKey,String(this.best));}catch{}this.lastSave=this.time;}
+ save(){if(this.mode==='SLAUGHTER')return;try{this.storage?.setItem(this.recordKey||RUN_CONFIG.bestKey,String(this.best));}catch{}this.lastSave=this.time;}
  receive(e){if(this.ended)return;
  const status={WINCH_NO_ANCHOR:'НЕТ ДЕРЕВА ПЕРЕД МАШИНОЙ',WINCH_ATTACHED:'ТРОС ЗАКРЕПЛЁН · УДЕРЖИВАЙ ТЯНУТЬ',WINCH_RELEASED:'ЛЕБЁДКА ОТЦЕПЛЕНА',WINCH_OVERHEATED:'ЛЕБЁДКА ПЕРЕГРЕЛАСЬ',WINCH_SNAPPED:'ТРОС ПОРВАН',WINCH_BROKEN:'ЛЕБЁДКА СЛОМАНА',TYRE_UNSEATED:'КОЛЕСО РАЗБОРТОВАЛОСЬ',TYRE_PUNCTURE:'ПРОКОЛ ШИНЫ',ENGINE_FLOODED:'МОТОР ЗАГЛОХ В БРОДУ',ENGINE_RESTARTED:'ДВИГАТЕЛЬ ЗАПУЩЕН',CAR_WASHED:'НИВА ОТМЫТА'};
  if(status[e.type]){this.notify(status[e.type]+(e.wheel?' · '+e.wheel:''),3);return;}

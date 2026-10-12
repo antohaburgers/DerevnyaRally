@@ -1,4 +1,4 @@
-import {rotate} from './physics.js?v=028';
+import {rotate} from './physics.js?v=051';
 export const MECHANICAL_CONFIG={minMechanicalDamage:10,failureChance:[.04,.12,.24],wheelDetachChance:[.01,.025,.07],damageBands:[20,35],maxDetachedWheels:1,wheelLife:4,debrisPool:4,landingMinDamage:20,randomFailureSpacing:100,randomFailureChance:1/60,randomFailureWeights:{FRONT_DRIVE_FAILURE:.40,REAR_DRIVE_FAILURE:.40,WHEEL_DETACHED:.20},bodyPartMinDamage:8,partLife:11,partPool:6,lockWarningWear:60,lockDangerWear:82,lockSurpriseChancePerSecond:.00011};
 const eligible=new Set(['TREE_HIT','HOUSE_HIT','TRAFFIC_HIT','COW_HIT','ROLLOVER_IMPACT','HARD_LANDING']);
 export class MechanicalDamage{

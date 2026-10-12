@@ -125,7 +125,7 @@ function updatePhysics(dt){
    const speed=Math.hypot(vehicle.v[0],vehicle.v[2]);
    hp=Math.max(0,hp-Math.min(12,speed*.65));
    damageCooldown=time+.8;
-   if(speed>8){map.destroyedDecor.add(tree.id);renderer.sync();}
+   if(speed>8){map.destroyedDecor.add(tree.id);const chunk=map.activeTiles.find(t=>t.foliage.includes(tree));if(chunk){const old=renderer.chunks.get(chunk.key);if(old)renderer.gl.deleteBuffer(old.b);renderer.chunks.delete(chunk.key);renderer.sync();}}
    else if(d>.01){vehicle.p[0]+=dx/d*(1.5-d);vehicle.p[2]+=dz/d*(1.5-d);vehicle.v[0]*=.5;vehicle.v[2]*=.5;}
   }
  }

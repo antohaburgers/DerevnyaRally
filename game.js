@@ -1,4 +1,4 @@
-import {StadiumWorld,CowStadium,STADIUM_CONFIG} from './cow-stadium.js?v=066';
+import {StadiumWorld,CowStadium,STADIUM_CONFIG} from './cow-stadium.js?v=067';
 import {ExpeditionWorld} from './expedition-world.js?v=061';
 import {ExpeditionSession,drawExpeditionMap} from './expedition-session.js?v=061';
 import {LabelLayout} from './race-labels.js?v=028';
@@ -32,7 +32,7 @@ import {VisualCar} from './visual-car.js?v=028';
 import {PAINTS,STOCK_BUILD,SUSPENSION_KITS,SPRING_TUNES,suspensionConfig,loadBuild,saveBuild,tireSurface,boostLevel} from './garage.js?v=055';
 import {createLiveryRenderer} from './livery-renderer.js?v=033';
 import {LIVERY_CATALOG,liveryAsset} from './livery-system.js?v=033';
-import {OffroadVehicle,CAR_CONFIG,rotate} from './physics.js?v=066';
+import {OffroadVehicle,CAR_CONFIG,rotate} from './physics.js?v=067';
 import {EngineAudio} from './engine-audio.js?v=037';
 const canvas=document.querySelector('canvas'),canvasHome=canvas.parentNode,canvasAnchor=canvas.nextSibling,gl=canvas.getContext('webgl',{antialias:true,alpha:false});if(!gl){document.querySelector('#error').hidden=false;document.querySelector('#error').textContent='WebGL недоступен. Открой сайт в Safari или Chrome.';throw Error('WebGL unavailable');}
 function shader(type,src){const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(s));return s;}

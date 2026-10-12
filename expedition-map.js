@@ -110,21 +110,46 @@ export class ExpeditionMap {
     }
     const join = (ia, ib, kind = 'road') => {
       const a = this.nodes[ia], b = this.nodes[ib], id = this.roads.length;
-      const dx = b.x - a.x, dz = b.z - a.z;
-      const bend = (hash(ia, ib, this.seed ^ 110) - 0.5) * 110;
-      const normalLength = Math.hypot(dx, dz) || 1;
-      const mid = { x: (a.x + b.x) / 2 - dz / normalLength * bend,
-                    z: (a.z + b.z) / 2 + dx / normalLength * bend };
-      const path = [a, mid, b];
+      const dx = b.x - a.x, dz = b.z - a.z, length = Math.hypot(dx, dz) || 1;
+      const nx = -dz / length, nz = dx / length;
+      const random = rng((this.seed ^ Math.imul(id + 1, 2246822519)) >>> 0);
       const northProgress = clamp((2700 - Math.min(a.z, b.z)) / 5500, 0, 1);
+      const types = ['gravel', 'country', 'forest', 'rutted', 'muddy', 'rocky'];
+      let surface = types[Math.floor(random() * types.length)];
+      if (kind === 'bridge') surface = 'bridge';
+      if (kind === 'ford' || kind === 'deep-ford') surface = 'ford';
+      // Explicit visual / physics distinctions: a narrow trail is not just a recoloured road.
+      const widths = { gravel: 7.4, country: 6.2, forest: 4.6, rutted: 4.2, muddy: 5.1, rocky: 4.8, bridge: 5.9, ford: 5.0 };
+      const width = widths[surface] * (0.90 + random() * 0.2);
+      const winding = {gravel: .10, country: .16, forest: .30, rutted: .22, muddy: .25, rocky: .31, bridge: .09, ford: .13}[surface];
+      const control = [a];
+      for (let j = 1; j <= 4; j++) {
+        const t = j / 5;
+        const bend = (random() - .5) * 2 * length * winding * Math.sin(Math.PI * t);
+        control.push({ x: a.x + dx * t + nx * bend, z: a.z + dz * t + nz * bend });
+      }
+      control.push(b);
+      const path = [a];
+      // Interpolated curved polyline (not three identical straight strokes).
+      for (let i = 0; i < control.length - 1; i++) {
+        const p0 = control[Math.max(0, i - 1)], p1 = control[i];
+        const p2 = control[i + 1], p3 = control[Math.min(control.length - 1, i + 2)];
+        const steps = Math.max(3, Math.ceil(Math.hypot(p2.x - p1.x, p2.z - p1.z) / 20));
+        for (let j = 1; j <= steps; j++) {
+          const t = j / steps, t2 = t * t, t3 = t2 * t;
+          const cat = key => .5 * ((2 * p1[key]) + (p2[key] - p0[key]) * t +
+            (2 * p0[key] - 5 * p1[key] + 4 * p2[key] - p3[key]) * t2 +
+            (-p0[key] + 3 * p1[key] - 3 * p2[key] + p3[key]) * t3);
+          path.push(j === steps && i === control.length - 2 ? b : {x: cat('x'), z: cat('z')});
+        }
+      }
       const road = {
-        id, from: ia, to: ib, kind, path,
-        width: this.config.roadWidth,
+        id, from: ia, to: ib, kind, surface, path, width,
         difficulty: Math.min(4, Math.floor(northProgress * 5)),
-        length: distance(a, mid) + distance(mid, b)
+        length: path.slice(1).reduce((sum, p, i) => sum + distance(path[i], p), 0)
       };
       this.roads.push(road);
-      for (let part = 0; part < 2; part++) {
+      for (let part = 0; part < path.length - 1; part++) {
         const p = path[part], q = path[part + 1];
         const segment = { road, a: p, b: q, part };
         const pad = this.config.tileSize;
@@ -196,26 +221,33 @@ export class ExpeditionMap {
   }
 
   surfaceAt(x, z) {
-    const waterDepth = this.riverDepth(x, z);
-    const road = this.roadAt(x, z);
-    const onRoad = !!road && road.distance <= road.road.width / 2;
-    let surfaceType = onRoad ? (road.road.kind === 'bridge' ? 'DIRT' :
-      road.road.difficulty >= 3 ? 'SOFT_DIRT' : 'DIRT') : 'GRASS';
-    let mudDepth = 0;
-    if (!onRoad && this.biomeAt(x, z) === 'BOG') {
-      surfaceType = 'PEAT';
-      mudDepth = 0.45;
+    const waterDepth = this.riverDepth(x, z), road = this.roadAt(x, z);
+    const onRoad = !!road && road.distance < road.road.width / 2;
+    const roadType = road?.road.surface ?? 'country', p = road?.road.difficulty ?? 0;
+    const biome = !onRoad ? this.biomeAt(x, z) : null;
+    const mild = noise(x, z, 38, this.seed ^ 533);
+    const strips = Math.sin(x * .71 + z * .42);
+    let surfaceType = 'GRASS', mudDepth = 0;
+    if (biome === 'BOG') { surfaceType = 'PEAT'; mudDepth = .46; }
+    if (onRoad) {
+      if (roadType === 'gravel') surfaceType = 'DIRT';
+      else if (roadType === 'rocky') surfaceType = strips > -.2 ? 'ROCK' : 'DIRT';
+      else if (roadType === 'forest') surfaceType = 'SOFT_DIRT';
+      else if (roadType === 'rutted') { surfaceType = 'SOFT_DIRT'; mudDepth = .20 + .17 * mild; }
+      else if (roadType === 'muddy') { surfaceType = 'MUD'; mudDepth = .28 + mild * .44; }
+      else if (roadType === 'bridge') surfaceType = 'DIRT';
+      else surfaceType = mild > .62 && p > 1 ? 'MUD' : 'DIRT';
+      if (surfaceType === 'MUD') mudDepth = Math.max(mudDepth, .16 + mild * (.3 + .13 * p));
     }
-    if (onRoad && road.road.difficulty >= 2) {
-      const muddy = noise(x, z, 55, this.seed ^ 533);
-      if (muddy > 0.54) { surfaceType = 'MUD'; mudDepth = 0.20 + muddy * 0.55; }
-    }
-    if (waterDepth > 0 && (!onRoad || road?.road.kind !== 'bridge')) {
+    const onBridge = onRoad && roadType === 'bridge';
+    if (waterDepth > 0 && !onBridge) {
       surfaceType = 'WATER';
-      mudDepth = Math.max(mudDepth, waterDepth * 0.30);
+      mudDepth = Math.max(mudDepth, waterDepth * .28);
     }
-    return { surfaceType, waterDepth: onRoad && road?.road.kind === 'bridge' ? 0 : waterDepth,
-      mudDepth, onRoad, roadId: road?.road.id ?? null };
+    return { surfaceType, waterDepth: onBridge ? 0 : waterDepth,
+      mudDepth, peatDepth: biome === 'BOG' ? .35 : 0,
+      offroadFactor: onRoad ? 0 : 1,
+      onRoad, roadType, roadId: road?.road.id ?? null };
   }
 
   tileAt(cx, cz) {

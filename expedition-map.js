@@ -1,3 +1,4 @@
+import {ExpeditionTerrain} from './expedition-terrain.js?v=060';
 // Finite, deterministic 2D world planner for the expedition mode.
 // No WebGL or DOM dependencies; the existing 3D renderer will consume active tiles.
 export const EXPEDITION_MAP_CONFIG = Object.freeze({
@@ -60,6 +61,7 @@ export class ExpeditionMap {
     this.delivered = false;
     this.generateNetwork();
     this.generateLandmarks();
+    this.terrain=new ExpeditionTerrain(this);
     this.update(this.start.x, this.start.z);
     return this;
   }
@@ -84,8 +86,9 @@ export class ExpeditionMap {
 
   baseHeight(x,z) {
     const progress=clamp((2700-z)/5500,0,1);
-    const hills=(noise(x,z,420,this.seed^81)-.5)*(12+progress*24)
-      +(noise(x,z,110,this.seed^82)-.5)*(2+progress*5);
+    const hills=(noise(x,z,420,this.seed^81)-.5)*(22+progress*42)
+      +(noise(x,z,110,this.seed^82)-.5)*(5+progress*12)
+      +(noise(x,z,42,this.seed^83)-.5)*(1.5+progress*3.8);
     const valley=smooth(clamp(Math.abs(z-this.river(x).center)/190,0,1));
     return 3+hills*valley;
   }
@@ -114,7 +117,8 @@ export class ExpeditionMap {
     }
     // Soft hillside around the finite play area; no clamping to a road corridor.
     const edge=Math.max(Math.abs(x)-1470,Math.abs(z)-2970,0);
-    return h+Math.min(80,edge*edge*.008);
+    const obstacle=this.terrain?.sample(x,z).height||0;
+    return h+obstacle+Math.min(80,edge*edge*.008);
   }
 
   generateNetwork() {
@@ -143,6 +147,7 @@ export class ExpeditionMap {
         for(let j=1;j<=steps;j++){const t=j/steps,t2=t*t,t3=t2*t,cat=k=>.5*(2*p1[k]+(p2[k]-p0[k])*t+(2*p0[k]-5*p1[k]+4*p2[k]-p3[k])*t2+(-p0[k]+3*p1[k]-3*p2[k]+p3[k])*t3);path.push(j===steps&&i===controls.length-2?b:{x:cat('x'),z:cat('z')});}
       }
       const road={id,from:ia,to:ib,kind,surface,path,width:widths[surface]*(.94+random()*.12),difficulty:Math.min(4,Math.floor(clamp((2700-Math.min(a.z,b.z))/5500,0,1)*5)),length:path.slice(1).reduce((n,p,i)=>n+distance(path[i],p),0)};
+      path[0].s=0;for(let i=1;i<path.length;i++)path[i].s=path[i-1].s+distance(path[i-1],path[i]);
       this.roads.push(road);
       for(let i=0;i<path.length-1;i++){
         const a=path[i],b=path[i+1],segment={road,a,b,part:i},pad=24,size=this.config.tileSize;
@@ -175,10 +180,22 @@ export class ExpeditionMap {
       if (!nearest || pt.distance < nearest.distance) {
         nearest = { ...pt, road: segment.road,
           yaw: Math.atan2(segment.b.x - segment.a.x, segment.b.z - segment.a.z),
+          distanceAlong:segment.a.s+(segment.b.s-segment.a.s)*pt.t,
           lateral:(x-pt.x)*Math.cos(Math.atan2(segment.b.x-segment.a.x,segment.b.z-segment.a.z))-(z-pt.z)*Math.sin(Math.atan2(segment.b.x-segment.a.x,segment.b.z-segment.a.z)) };
       }
     }
     return nearest;
+  }
+
+  routeProfile(point) {
+    if(!point)return {stage:'WILD',width:0,cleared:false};
+    const {road}=point,s=point.distanceAlong||0;
+    if(['bridge','ford'].includes(road.surface)||Math.min(s,road.length-s)<60)return {stage:'TRACK',width:road.width,cleared:true,type:road.surface};
+    const at=((s-60+road.id*37)%390+390)%390;
+    // A route is a direction through terrain: 50 m of track, then woodland and bog.
+    const stage=at<50?'TRACK':at<115?'FOREST':at<190?'RUTS':at<270?'BOG':at<335?'ROCKS':'GULLY';
+    const type={TRACK:road.surface,FOREST:'forest',RUTS:'rutted',BOG:'muddy',ROCKS:'rocky',GULLY:'abandoned'}[stage];
+    return {stage,width:stage==='TRACK'?road.width:stage==='FOREST'?3.5:4.3,cleared:stage==='TRACK',type};
   }
 
   biomeAt(x, z) {
@@ -186,26 +203,29 @@ export class ExpeditionMap {
         Math.hypot(x - this.goal.x, z - this.goal.z) < 190)
       return 'VILLAGE';
     if (this.riverDepth(x, z) > 0) return 'RIVER';
+    const near=this.roadAt(x,z),route=this.routeProfile(near);if(near&&near.distance<32){if(route.stage==='FOREST')return 'FOREST';if(route.stage==='BOG')return 'BOG';}
     const n = noise(x, z, 590, this.seed ^ 0x9875);
     return n > 0.61 ? 'FIELD' : n < 0.13 ? 'BOG' : 'FOREST';
   }
 
   surfaceAt(x, z) {
     const waterDepth = this.riverDepth(x, z), road = this.roadAt(x, z);
-    const onRoad = !!road && road.distance < road.road.width / 2;
-    const roadType = road?.road.surface ?? 'country', p = road?.road.difficulty ?? 0;
+    const route=this.routeProfile(road);
+    const onTrail=!!road&&road.distance<route.width/2;
+    const onRoad=onTrail&&route.stage!=='FOREST'&&route.stage!=='GULLY';
+    const roadType = route.type??'country', p = road?.road.difficulty ?? 0;
     const biome = !onRoad ? this.biomeAt(x, z) : null;
     const mild = noise(x, z, 38, this.seed ^ 533);
     const strips = Math.sin(x * .71 + z * .42);
     let surfaceType = 'GRASS', mudDepth = 0;
     if (biome === 'BOG' && z<1200) { surfaceType = 'PEAT'; mudDepth = .46; }
-    if (onRoad) {
+    if (onTrail) {
       if (roadType === 'gravel') surfaceType = 'DIRT';
       else if (roadType === 'rocky') surfaceType = strips > -.2 ? 'ROCK' : 'DIRT';
-      else if (roadType === 'forest') surfaceType = 'SOFT_DIRT';
+      else if (roadType === 'forest') surfaceType = 'GRASS';
       else if (roadType === 'abandoned') { surfaceType='GRASS';mudDepth=.1; }
       else if (roadType === 'rutted') { surfaceType = 'SOFT_DIRT'; mudDepth = .20 + .17 * mild; }
-      else if (roadType === 'muddy') { surfaceType = 'MUD'; mudDepth = .28 + mild * .44; }
+      else if (roadType === 'muddy') { surfaceType = 'MUD'; mudDepth = .32 + mild * (.24+p*.07); }
       else if (roadType === 'bridge') surfaceType = 'DIRT';
       else surfaceType = mild > .62 && p > 1 ? 'MUD' : 'DIRT';
       if (surfaceType === 'MUD') mudDepth = Math.max(mudDepth, .16 + mild * (.3 + .13 * p));
@@ -215,8 +235,11 @@ export class ExpeditionMap {
       surfaceType = 'WATER';
       mudDepth = Math.max(mudDepth, waterDepth * .28);
     }
+    const obstacle=this.terrain?.sample(x,z).feature;
+    if(obstacle&&waterDepth===0&&!onBridge){surfaceType=obstacle.surfaceType||surfaceType;mudDepth=Math.max(mudDepth,(obstacle.mudDepth||0)*obstacle.weight);}
     return { surfaceType, waterDepth: onBridge ? 0 : waterDepth,
-      mudDepth, peatDepth: biome === 'BOG' ? .35 : 0,
+      mudDepth, peatDepth:Math.max(biome==='BOG'?.35:0,(obstacle?.peatDepth||0)*(obstacle?.weight||0)),
+      obstacle:obstacle?.kind||null,routeStage:route.stage,roadWidth:route.width,
       offroadFactor: onRoad ? 0 : 1,
       onRoad, roadType, roadId: road?.road.id ?? null };
   }

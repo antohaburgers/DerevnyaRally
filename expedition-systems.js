@@ -1,9 +1,9 @@
-import {rotate} from './physics.js?v=055';
+import {rotate} from './physics.js?v=060';
 
 const clamp=(n,a,b)=>Math.min(b,Math.max(a,n));
 export const EXPEDITION_CONFIG={
  winchRange:23,winchMinimum:2.1,winchSpeed:1.45,winchMaxPull:10500,winchSnapForce:10100,winchHeatRate:.11,winchCoolRate:.22,
- pressureMin:.8,pressureMax:2.2,pressureStep:.2,deepFordIntake:.49,snorkelIntake:.87,
+ pressureMin:.8,pressureMax:2.2,pressureStep:.2,deepFordIntake:.49,snorkelIntake:.87,restartDepth:.22,restartDryTime:.65,
  grimeRate:.034,scarDamage:14
 };
 export const TYRE_PRESSURES=Object.freeze({road:2.2,trail:1.5,soft:.8});
@@ -14,7 +14,7 @@ export class ExpeditionSystems{
   this.build=build||{};this.pressure=TYRE_PRESSURES[this.build.tyrePressure]??2.2;
   this.tyres=Array.from({length:4},()=>({punctured:false,unseated:false,wear:0}));
   this.winch={tree:null,length:0,pulling:false,heat:0,broken:false,load:0,overload:0};
-  this.engine={stalled:false,wetTime:0,restartCooldown:0};
+  this.engine={stalled:false,wetTime:0,restartCooldown:0,dryTime:0};
   this.grime=0;this.scratches=0;this.damageMarks=0;
   this.mudZones=[0,0,0];this.lastPuncture=0;this.lastBead=0;this.lastWater=0;
  }
@@ -51,9 +51,19 @@ export class ExpeditionSystems{
  }
  release(){this.winch.tree=null;this.winch.pulling=false;this.winch.load=0;this.apply();}
  setPulling(v){this.winch.pulling=!!v&&!!this.winch.tree&&!this.winch.broken&&this.winch.heat<1;this.apply();}
+ canRestart(){
+  if(!this.body||!this.engine.stalled||this.engine.restartCooldown>0||this.body.state.runEnded||this.body.state.fuel===0)return false;
+  // Sample current coordinates: an evacuation or winch can move the car since the last wet tick.
+  let wet=0;for(const wheel of this.body.wheels){const p=this.body.point?.([wheel.x,this.body.c?.mountHeight||0,wheel.z]);wet=Math.max(wet,p&&this.body.terrain?.surface?this.body.terrain.surface(p[0],p[2]).waterDepth||0:wheel.waterDepth||0);}
+  this.lastWater=wet;return wet<=EXPEDITION_CONFIG.restartDepth;
+ }
  restart(){
-  if(!this.body||!this.engine.stalled||this.engine.restartCooldown>0||this.lastWater>.22)return false;
-  this.engine.stalled=false;this.engine.wetTime=0;this.engine.restartCooldown=4;
+  if(!this.canRestart())return false;
+  this.engine.stalled=false;this.engine.wetTime=0;this.engine.dryTime=0;this.engine.restartCooldown=1;
+  const s=this.body.state;
+  if(Math.abs(s.vehicleSpeed||0)<5){s.currentGear=1;s.shiftRemaining=0;this.body.cooldown=0;this.body.reverseHold=0;s.kickdownHold=s.lugHold=s.rapidDecelHold=0;}
+  s.currentRPM=this.body.c?.idleRPM||850;
+  s.engineRunning=true;s.enginePowerFactor=s.fuel===0?0:(s.hp<=25?.85:1)*(this.build.engine==='turbo'?1.30:1);
   this.apply();this.feedback?.emit('ENGINE_RESTARTED');return true;
  }
  hit(type,damage,event={}){
@@ -85,9 +95,11 @@ export class ExpeditionSystems{
   if(wet>threshold&&Math.abs(s.vehicleSpeed||0)<55){
    this.engine.wetTime+=dt*(.8+(wet-threshold)*2);
    if(this.engine.wetTime>1.35&&!this.engine.stalled){
-    this.engine.stalled=true;this.feedback?.emit('ENGINE_FLOODED',{depth:wet});
+    this.engine.stalled=true;this.engine.dryTime=0;this.feedback?.emit('ENGINE_FLOODED',{depth:wet});
    }
   }else this.engine.wetTime=Math.max(0,this.engine.wetTime-dt*1.4);
+  this.engine.dryTime=wet<=EXPEDITION_CONFIG.restartDepth?this.engine.dryTime+dt:0;
+  if(this.engine.stalled&&this.engine.dryTime>=EXPEDITION_CONFIG.restartDryTime&&(s.throttleInput||s.throttle||0)>.08)this.restart();
   const winch=this.winch;
   winch.heat=Math.max(0,winch.heat-dt*EXPEDITION_CONFIG.winchCoolRate);
   if(winch.tree?.broken){this.release();this.feedback?.emit('WINCH_RELEASED');}
@@ -129,7 +141,7 @@ export class ExpeditionSystems{
  wash(){this.grime=0;this.mudZones.fill(0);this.scratches=0;this.damageMarks=0;this.feedback?.emit('CAR_WASHED');}
  repair(){for(const t of this.tyres){t.punctured=false;t.unseated=false;t.wear=0;}
   this.winch.broken=false;this.winch.heat=0;this.winch.pulling=false;this.winch.overload=0;this.release();
-  this.engine.stalled=false;this.engine.wetTime=0;this.engine.restartCooldown=0;
+  this.engine.stalled=false;this.engine.wetTime=0;this.engine.dryTime=0;this.engine.restartCooldown=0;
   this.scratches=0;this.damageMarks=0;this.apply();
  }
  shift(dx,dz){/* Tree object is shifted by RoadWorld.shift(), no duplicate coordinates. */ }

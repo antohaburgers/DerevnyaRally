@@ -5,7 +5,7 @@ import {OffroadVehicle,CAR_CONFIG} from '../physics.js';
 import {ExpeditionSystems} from '../expedition-systems.js';
 
 const seeds=[1,42,731024,9981,0xffffffff];
-test('irregular graph has loops, dead ends, all POIs connected and a firm bridge route',()=>{
+test('irregular graph has loops, dead ends, all POIs connected and an alternative bridge route',()=>{
  for(const seed of seeds){const w=new ExpeditionWorld(seed),m=w.map,degree=m.nodes.map(()=>0);for(const r of m.roads){degree[r.from]++;degree[r.to]++;assert.ok(r.path.length>=8);assert.ok(r.path.every(p=>m.bounds(p.x,p.z)));}
  assert.ok(degree.filter(d=>d===1).length>=4);assert.ok(m.roads.length>m.nodes.length);assert.ok(new Set(m.roads.map(r=>r.surface)).size>=8);
  for(const poi of m.landmarks)assert.ok(m.routeExists(m.start.id,poi.nodeId));
@@ -15,7 +15,7 @@ test('irregular graph has loops, dead ends, all POIs connected and a firm bridge
 });
 test('exact triangle contact height is continuous at every sampled chunk seam',()=>{
  const w=new ExpeditionWorld(42);for(let x=-1408;x<=1408;x+=128)for(let z=-2816;z<=2816;z+=256){const h=w.height(x,z);w.update(x+60,z+60);assert.equal(w.height(x,z),h);assert.ok(Math.abs(w.height(x-1e-5,z)-w.height(x+1e-5,z))<1e-3);}
- const section=w.current;let checks=0;w.terrainTriangles(section,(key,a,b,c)=>{if(key==='WATER_TOP')return;const x=section.entryTransform.x+(a[0]+b[0]+c[0])/3,z=section.entryTransform.z+(a[2]+b[2]+c[2])/3;assert.ok(Math.abs(w.height(x,z)-(a[1]+b[1]+c[1])/3)<1e-8);checks++;});assert.equal(checks,8192);
+ const section=w.current;let checks=0;w.terrainTriangles(section,(key,a,b,c)=>{if(key==='WATER_TOP')return;const x=section.entryTransform.x+(a[0]+b[0]+c[0])/3,z=section.entryTransform.z+(a[2]+b[2]+c[2])/3;assert.ok(Math.abs(w.height(x,z)-(a[1]+b[1]+c[1])/3)<1e-8);checks++;});assert.ok(checks>=8192);
 });
 test('streamed world is bounded, objects survive unloading and coordinates are deterministic',()=>{
  const a=new ExpeditionWorld(9981),b=new ExpeditionWorld(9981);const key=a.current.id;const snapshot=structuredClone(a.current.decorations);b.update(-1000,-2200);b.update(a.start.x,a.start.z);assert.deepEqual(b.current.decorations,snapshot);

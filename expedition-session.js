@@ -1,6 +1,6 @@
 import {STOCK_BUILD,suspensionConfig} from './garage.js?v=055';
-import {CAR_CONFIG,rotate} from './physics.js?v=055';
-import {orientation} from './run-state.js?v=056';
+import {CAR_CONFIG,rotate} from './physics.js?v=060';
+import {orientation} from './run-state.js?v=060';
 const NAMES={tires:'ГРЯЗЕВЫЕ ШИНЫ',winch:'ЛЕБЁДКА',suspension:'УСИЛЕННАЯ ПОДВЕСКА',snorkel:'ШНОРКЕЛЬ'};
 export class ExpeditionSession {
  constructor(world,run,body,actors){this.world=world;this.run=run;this.body=body;this.actors=actors;this.found=new Set();this.cargo={crates:12,condition:100,mass:0};this.winchUses=0;this.serviceTimes=new Map();this.complete=false;this.celebrants=[];this.mapOpen=false;this.mapElapsed=0;this.checkpoint={...world.start,yaw:world.map.roadAt(world.start.x,world.start.z)?.yaw||Math.PI};this.celebrationTime=0;this.wasPulling=false;}
@@ -35,15 +35,24 @@ export class ExpeditionSession {
  get summary(){const r=this.run;return `ТЮНИНГ ${this.found.size}/4 · ПОВРЕЖДЕНИЯ ${r.stats.collisions+r.stats.hardLandings} · ПЕРЕВОРОТЫ ${r.stats.rollovers} · ЛЕБЁДКА ${this.winchUses} · ГРУЗ ${this.cargo.crates} ЯЩ. / ${this.cargo.condition}%`;}
 }
 
-// Uses only the added map overlay; the original vehicle HUD stays in game.js.
-export function drawExpeditionMap(canvas,session){const ctx=canvas.getContext('2d'),m=session.world.map,W=canvas.width,H=canvas.height,s=m.config.tileSize;
+// Permanent overview and enlarged map share one cached cartographic background.
+const mapBackgrounds=new WeakMap();
+const MARKERS={tires:'1 MT',winch:'2 ЛБ',suspension:'3 ПД',snorkel:'4 ШН'};
+export function drawExpeditionMap(canvas,session,{mini=false}={}){
+ const ctx=canvas.getContext('2d'),m=session.world.map,W=canvas.width,H=canvas.height;
  const px=z=>(3000-z)/6000*W,py=x=>(x+1500)/3000*H;
- ctx.fillStyle='#111e1a';ctx.fillRect(0,0,W,H);ctx.save();ctx.beginPath();
- for(const key of m.discovered){const [x,z]=key.split(':').map(Number);ctx.rect(px((z+1)*s),py(x*s),s/6000*W+1,s/3000*H+1);}ctx.clip();
- for(let x=-1500;x<1500;x+=128)for(let z=-3000;z<3000;z+=128){const biome=m.biomeAt(x+64,z+64);ctx.fillStyle={FOREST:'#355141',FIELD:'#7a8154',BOG:'#485747',VILLAGE:'#807359',RIVER:'#416f82'}[biome];ctx.fillRect(px(z+128),py(x),128/6000*W+1,128/3000*H+1);}
- ctx.strokeStyle='#5993ac';ctx.lineWidth=12;ctx.beginPath();for(let x=-1500;x<=1500;x+=30){const z=m.river(x).center;if(x===-1500)ctx.moveTo(px(z),py(x));else ctx.lineTo(px(z),py(x));}ctx.stroke();
- const colors={gravel:'#e6d8ae',country:'#c8b994',forest:'#a7bd7b',rutted:'#b48b65',muddy:'#765237',rocky:'#bdc4c1',abandoned:'#668557',bridge:'#f9d567',ford:'#c4edf8'};
- for(const road of m.roads){ctx.strokeStyle=colors[road.surface];ctx.lineWidth=road.surface==='gravel'?3:2;ctx.setLineDash(road.surface==='abandoned'?[3,4]:[]);ctx.beginPath();road.path.forEach((p,i)=>{if(i)ctx.lineTo(px(p.z),py(p.x));else ctx.moveTo(px(p.z),py(p.x));});ctx.stroke();}ctx.setLineDash([]);ctx.restore();
- ctx.font='bold 14px sans-serif';for(const p of m.landmarks){const key=Math.floor(p.x/s)+':'+Math.floor(p.z/s);if(p.kind!=='delivery'&&!m.discovered.has(key))continue;const x=px(p.z),y=py(p.x);ctx.fillStyle=p.upgrade?(session.found.has(p.upgrade)?'#65e8a4':'#ffe16c'):p.kind==='delivery'?'#ffad68':'#eff7dd';ctx.beginPath();ctx.arc(x,y,5,0,Math.PI*2);ctx.fill();ctx.fillText(p.label,x+8,Math.max(18,y-8));}
- const b=session.body,x=px(b.p[2]),y=py(b.p[0]),front=rotate(b.q,[0,0,1]);ctx.save();ctx.translate(x,y);ctx.rotate(Math.atan2(front[0],-front[2]));ctx.fillStyle='#fff';ctx.strokeStyle='#132';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(12,0);ctx.lineTo(-8,-7);ctx.lineTo(-5,0);ctx.lineTo(-8,7);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();ctx.fillStyle='#ddd';ctx.fillText('СЕВЕР ←   ·   SEED '+m.seed,12,H-12);
+ let cached=mapBackgrounds.get(canvas);
+ if(!cached||cached.map!==m){const image=document.createElement('canvas');image.width=W;image.height=H;const c=image.getContext('2d');c.fillStyle='#111e1a';c.fillRect(0,0,W,H);
+  for(let x=-1500;x<1500;x+=128)for(let z=-3000;z<3000;z+=128){const biome=m.biomeAt(x+64,z+64);c.fillStyle={FOREST:'#355141',FIELD:'#7a8154',BOG:'#485747',VILLAGE:'#807359',RIVER:'#416f82'}[biome];c.fillRect(px(z+128),py(x),128/6000*W+1,128/3000*H+1);}
+  c.strokeStyle='#5993ac';c.lineWidth=H*.025;c.beginPath();for(let x=-1500;x<=1500;x+=30){const z=m.river(x).center;if(x===-1500)c.moveTo(px(z),py(x));else c.lineTo(px(z),py(x));}c.stroke();
+  const colors={TRACK:'#e6d8ae',FOREST:'#a7bd7b',RUTS:'#b48b65',BOG:'#977353',ROCKS:'#bdc4c1',GULLY:'#668557'};
+  for(const road of m.roads)for(let i=1;i<road.path.length;i++){const p=road.path[i-1],q=road.path[i],profile=m.routeProfile({road,distanceAlong:(p.s+q.s)/2});c.strokeStyle=road.surface==='bridge'?'#f9d567':road.surface==='ford'?'#c4edf8':colors[profile.stage];c.lineWidth=mini?1.5:2.5;c.setLineDash(profile.cleared?[]:[3,3]);c.beginPath();c.moveTo(px(p.z),py(p.x));c.lineTo(px(q.z),py(q.x));c.stroke();}c.setLineDash([]);
+  cached={map:m,image};mapBackgrounds.set(canvas,cached);
+ }
+ ctx.drawImage(cached.image,0,0);ctx.font='bold '+(mini?21:18)+'px sans-serif';ctx.lineWidth=mini?4:3;ctx.strokeStyle='#102018';
+ for(const p of m.landmarks){if(mini&&!p.upgrade&&p.kind!=='delivery'&&p.kind!=='depot')continue;const x=px(p.z),y=py(p.x);ctx.fillStyle=p.upgrade?(session.found.has(p.upgrade)?'#65e8a4':'#ffe16c'):p.kind==='delivery'?'#ffad68':'#eff7dd';ctx.beginPath();ctx.arc(x,y,mini?7:6,0,Math.PI*2);ctx.fill();
+  const label=mini?(p.upgrade?MARKERS[p.upgrade]:p.kind==='delivery'?'🍺':'СТАРТ'):(p.upgrade?NAMES[p.upgrade]:p.label),textX=Math.min(W-(mini?74:220),Math.max(8,x+8)),textY=Math.max(22,y-10);ctx.strokeText(label,textX,textY);ctx.fillText(label,textX,textY);
+ }
+ const b=session.body,x=px(b.p[2]),y=py(b.p[0]),front=rotate(b.q,[0,0,1]);ctx.save();ctx.translate(x,y);ctx.rotate(Math.atan2(front[0],-front[2]));ctx.fillStyle='#fff';ctx.strokeStyle='#132';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(12,0);ctx.lineTo(-8,-7);ctx.lineTo(-5,0);ctx.lineTo(-8,7);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();
+ if(!mini){ctx.fillStyle='#ddd';ctx.fillText('СЕВЕР ←   ·   SEED '+m.seed,12,H-12);}
 }

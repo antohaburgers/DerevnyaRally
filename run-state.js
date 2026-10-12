@@ -1,12 +1,12 @@
 import {MechanicalDamage} from './mechanical.js?v=056';
-import {ExpeditionSystems} from './expedition-systems.js?v=056';
-import {rotate} from './physics.js?v=055';
+import {ExpeditionSystems} from './expedition-systems.js?v=060';
+import {rotate} from './physics.js?v=060';
 export const RUN_CONFIG={bestKey:'niva3d.bestMeters.v1',hp:100,fuel:100,fuelConsumptionMultiplier:1.15,fuelIdle:.006,fuelThrottle:.085,fuelRPM:.026,fuelLoad:.020,lowConsumption:1.10,repair:25,refuel:25,impactThreshold:1,impactExponent:1.65,impactScale:.20,impactMax:75,hitCooldown:.35,landingThreshold:4.5,landingScale:2,landingDamageMultiplier:.70,slideRate:.08,slideSpeedRate:.025,maxSlideSpeed:15,saveInterval:2};
 export const DAMAGE_EVENTS=['FARMER_HIT','VILLAGE_PROP_HIT','COW_HIT','TREE_HIT','HOUSE_HIT','TRAFFIC_HIT','FENCE_HIT','SIGN_HIT','HARD_LANDING','ROLLOVER_IMPACT','ROOF_SLIDE'];
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 export function orientation(q){const up=rotate(q,[0,1,0])[1];return up>.5?'NORMAL':up>-.5?'SIDE':'UPSIDE_DOWN';}
 export function collisionDamage(impulse,mass=1280){return clamp(RUN_CONFIG.impactScale*Math.max(0,impulse/mass-RUN_CONFIG.impactThreshold)**RUN_CONFIG.impactExponent,0,RUN_CONFIG.impactMax);}
-export function fuelRate(state){const rpm=clamp((state.currentRPM-850)/5350,0,1),throttle=clamp(state.throttle||0,0,1);return(RUN_CONFIG.fuelIdle+RUN_CONFIG.fuelThrottle*throttle**2+RUN_CONFIG.fuelRPM*rpm+RUN_CONFIG.fuelLoad*clamp(state.load||0,0,1))*(state.transferRange==='L'?RUN_CONFIG.lowConsumption:1)*RUN_CONFIG.fuelConsumptionMultiplier;}
+export function fuelRate(state){if(state.engineRunning===false)return 0;const rpm=clamp((state.currentRPM-850)/5350,0,1),throttle=clamp(state.throttle||0,0,1);return(RUN_CONFIG.fuelIdle+RUN_CONFIG.fuelThrottle*throttle**2+RUN_CONFIG.fuelRPM*rpm+RUN_CONFIG.fuelLoad*clamp(state.load||0,0,1))*(state.transferRange==='L'?RUN_CONFIG.lowConsumption:1)*RUN_CONFIG.fuelConsumptionMultiplier;}
 export class RunState{
  constructor(feedback,storage){this.feedback=feedback;this.storage=storage;this.best=0;try{const value=Number(storage?.getItem(RUN_CONFIG.bestKey));if(Number.isFinite(value)&&value>=0&&value<1e9)this.best=value;}catch{}this.mechanical=new MechanicalDamage(feedback);this.expedition=new ExpeditionSystems(feedback);this.unsubscribe=feedback.onEvent(e=>this.receive(e));this.reset();}
  reset(){this.mechanical.reset();this.expedition.reset(this.garageBuild);this.hp=100;this.fuel=100;this.distance=0;this.beer=false;this.ended=false;this.time=0;this.cooldowns=new Map();this.messages=[];this.previousBest=this.best;this.recordShown=false;this.lastSave=0;this.lastSlide=-10;this.lastOrientation='NORMAL';this.orientation='NORMAL';this.body=null;this.damageImmuneUntil=0;this.lastImpactDamage=0;this.stats={trees:0,fences:0,signs:0,beers:0,collisions:0,rollovers:0,hardLandings:0,brokenParts:0,brokenLocks:0};}

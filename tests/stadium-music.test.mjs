@@ -8,3 +8,9 @@ test('arena discovers gaps and uppercase optional music without confusing race t
 test('stopping arena invalidates asynchronous discovery and does not restart audio',async()=>{
  const previous=globalThis.fetch;let resolve;const gate=new Promise(r=>resolve=r);globalThis.fetch=()=>gate;const audio={paused:true,addEventListener(){},pause(){this.paused=true;},play(){this.paused=false;return Promise.resolve();}};const m=new MusicPlayer({enabled:true},[],()=>audio);m.unlocked=true;const loading=m.setPool('CIRCUIT_START');m.stop();resolve({ok:false});globalThis.fetch=async()=>({ok:false});await loading;assert.equal(m.suspended,true);assert.equal(m.current,null);assert.equal(audio.paused,true);globalThis.fetch=previous;
 });
+test('empty arena audio is rejected and valid uppercase replacement is discovered',async()=>{
+ const files=await discoverTracks({prefix:'arena',maxTracks:1},async url=>({ok:true,headers:{get:key=>key==='content-type'?'audio/mpeg':url.endsWith('.MP3')?'4000':'2'}}));assert.deepEqual(files,['arena1.MP3']);
+});
+test('arena preload does not play early and is used at the start signal',async()=>{
+ const previous=globalThis.fetch;globalThis.fetch=async url=>({ok:url.endsWith('arena1.mp3'),headers:{get:key=>key==='content-type'?'audio/mpeg':'4096'}});const audio={paused:true,addEventListener(){},load(){},pause(){this.paused=true;},play(){this.paused=false;return Promise.resolve();}};try{const m=new MusicPlayer({enabled:true},[],()=>audio);m.unlocked=true;await m.preload('ARENA');assert.equal(audio.paused,true);assert.equal(m.current,null);await m.setPool('ARENA');assert.equal(m.current,'arena1.mp3');assert.equal(audio.paused,false);m.stop();}finally{globalThis.fetch=previous;}
+});

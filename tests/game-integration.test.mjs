@@ -50,3 +50,6 @@ test('stadium finishes through real frame/physics loop even with a substep fract
  for(let i=1;i<340;i++)frame(4000+i*16.6666667);assert.equal(game.stadium.phase,'results');assert.equal(game.run.ended,true);assert.equal(el('#run-results').hidden,false);
  game.startRun('SLAUGHTER');game.stadium.before(6,0);game.stadium.before(3,0);for(let i=0;i<3900&&game.stadium.phase==='playing';i++)frame(12000+i*16.6666667);assert.equal(game.stadium.time,60);assert.equal(game.stadium.phase,'outro');
 });
+test('garage turbo selection reaches the actual stadium engine factor',()=>{
+ const choose=engine=>{const handler=el('#garage-screen').handlers.click[0];handler({target:{closest:()=>({dataset:{tune:'engine',value:engine}})}});};choose('turbo');game.startRun('SLAUGHTER');assert.equal(game.run.garageBuild.engine,'turbo');assert.equal(game.physics.state.turboInstalled,true);assert.equal(game.physics.state.enginePowerFactor,1.3);choose('stock');game.startRun('SLAUGHTER');assert.equal(game.physics.state.enginePowerFactor,1);
+});

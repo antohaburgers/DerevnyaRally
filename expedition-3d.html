@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#142b24"><title>Бесконечная Нива 3D · Экспедиция</title>
+<style>
+:root{--paper:#efe8cf;--amber:#e9b95a;--safe-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;touch-action:none;overscroll-behavior:none;background:#142b24;color:var(--paper);font-family:system-ui,-apple-system,Arial,sans-serif;user-select:none;-webkit-user-select:none}
+button{touch-action:none;-webkit-tap-highlight-color:transparent;font:700 12px system-ui;color:var(--paper);border:1px solid #d7bb785e;background:#1c3936e8;border-radius:10px;cursor:pointer;padding:9px}
+button:active,.pressed{background:#ae823cdd!important}
+#screen{display:block;position:absolute;inset:0;width:100%;height:100%;touch-action:none}
+#ui{position:absolute;inset:0;pointer-events:none}
+#ui>*{pointer-events:auto}
+header{position:absolute;top:max(8px,env(safe-area-inset-top));left:max(10px,env(safe-area-inset-left));right:max(10px,env(safe-area-inset-right));display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+#branding{padding:8px 12px;background:#122a26d9;border:1px solid #8a9b6a75;border-radius:10px}
+#branding b{letter-spacing:1px;font-size:14px}#branding small{display:block;font-size:9px;color:#e3c983}
+#top-actions{display:flex;gap:5px}#top-actions button{padding:9px 10px;font-size:10px}
+#telemetry{position:absolute;left:50%;top:max(11px,env(safe-area-inset-top));transform:translateX(-50%);text-align:center;text-shadow:0 2px 5px #1119;pointer-events:none}
+#speed{font:800 27px system-ui;letter-spacing:-1px}#telemetry small{font-size:9px}#rpm{font-size:10px;color:#f7db8f}
+#minimap{position:absolute;right:max(14px,env(safe-area-inset-right));top:62px;width:155px;height:155px;border:2px solid #d2c29277;border-radius:13px;background:#203629cc}
+#journey{position:absolute;right:max(14px,env(safe-area-inset-right));top:223px;font-size:10px;background:#17352fdf;padding:8px;border-radius:8px;max-width:180px}
+#journey strong{display:block;color:#efd285;font-size:11px}
+#hint{position:absolute;top:32%;left:50%;transform:translateX(-50%);max-width:min(460px,75vw);background:#182f28eb;border:1px solid #d9bd7055;border-radius:12px;padding:11px 19px;text-align:center;font-size:13px;pointer-events:none;opacity:0;transition:opacity .2s}
+#hint.visible{opacity:1}
+#joystick{position:absolute;bottom:max(24px,calc(var(--safe-bottom) + 24px));left:max(22px,env(safe-area-inset-left));width:146px;height:146px;border:2px solid #d7dcce75;border-radius:50%;background:#1b33345c;display:grid;place-items:center;touch-action:none}
+#joystick:after{content:'РУЛЬ';font-size:10px;color:#faf1c9c2;position:absolute;bottom:10px}
+#knob{width:65px;height:65px;border-radius:50%;background:#d3c49b8f;border:2px solid #f9deb7aa;transform:translateX(var(--steer,0px));box-shadow:0 3px 15px #10191aaa}
+#pedals{position:absolute;bottom:max(22px,calc(var(--safe-bottom) + 22px));right:max(20px,env(safe-area-inset-right));display:flex;align-items:end;gap:12px}
+#pedals button{font-size:13px;font-weight:850;letter-spacing:.4px;width:90px;height:102px;border-radius:13px}
+#gas{background:#356a45dc}#brake{background:#824e43e8}
+#hand{position:absolute;right:max(20px,env(safe-area-inset-right));bottom:max(136px,calc(var(--safe-bottom) + 136px));width:89px}
+#drivetrain{position:absolute;bottom:max(14px,calc(var(--safe-bottom) + 14px));left:50%;transform:translateX(-50%);display:flex;gap:5px;align-items:center}
+#drivetrain button{min-width:59px;height:38px;background:#263d32e8;font-size:10px}
+#drivetrain button.active{background:#785e29;border-color:#ffe0a3}
+#status{position:absolute;bottom:max(172px,calc(var(--safe-bottom) + 174px));left:50%;transform:translateX(-50%);background:#152923ba;border-radius:8px;padding:7px 9px;font-size:10px;text-align:center;pointer-events:none}
+#status span{color:#f4d68d}
+#landing{position:absolute;inset:0;background:linear-gradient(125deg,#10231fe8,#263a31bb);display:flex;flex-direction:column;justify-content:center;align-items:center;gap:12px;z-index:9;text-align:center;padding:18px}
+#landing h1{font-size:clamp(24px,4vw,40px);margin:0;color:#f8d188}#landing p{max-width:480px;margin:0;font-size:13px;line-height:1.6}#landing .enter{background:#eec46e;color:#163729;padding:13px 30px;font-size:14px}
+#landing small{max-width:490px;color:#d6c9a7}
+#result{position:absolute;inset:0;background:#10271fe9;z-index:8;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px}
+#result h1{font-size:clamp(29px,5vw,64px);color:#f6cb64;margin:0 0 13px}
+#result p{font-size:15px}
+#rotate{display:none;position:absolute;inset:0;z-index:15;background:#122e25;align-items:center;justify-content:center;padding:20px;text-align:center}
+#map-panel{display:none;position:absolute;inset:0;background:#0f231cf5;z-index:7;padding:8px;justify-content:center;align-items:center;flex-direction:column}
+#map-panel canvas{max-height:78%;max-width:95%;height:75%;width:auto;aspect-ratio:1/2;border:1px solid #98b88d88;background:#819f77}
+#map-panel button{margin-top:6px}
+@media(orientation:portrait) and (pointer:coarse){#rotate{display:flex}}
+@media(max-height:410px){#joystick{width:120px;height:120px;bottom:15px}#knob{width:55px;height:55px}#pedals button{height:80px;width:78px}#hand{bottom:105px;width:78px}#minimap{width:114px;height:114px;top:52px}#journey{top:170px;font-size:9px}#status{bottom:126px}#branding b{font-size:11px}#speed{font-size:21px}#drivetrain button{min-width:51px;height:31px}}
+</style>
+</head>
+<body>
+<canvas id="screen" aria-label="Трёхмерная экспедиция Нивы"></canvas>
+<div id="ui">
+<header><div id="branding"><b>НИВА · ЭКСПЕДИЦИЯ</b><small>ПОЛЕВОЙ ТЕСТ 3D / v0.58</small></div><div id="top-actions"><button id="map">КАРТА</button><button id="sound">ЗВУК ON</button><button id="rescue">ЭВАКУАЦИЯ</button><button id="exit">МЕНЮ</button></div></header>
+<div id="telemetry"><div><span id="speed">0</span><small> КМ/Ч</small></div><div id="rpm">850 RPM · 1 · HIGH</div></div>
+<canvas id="minimap" width="240" height="240" aria-label="Миникарта"></canvas>
+<div id="journey"><strong id="objective">НАЙТИ ТЮНИНГ</strong><span id="distance">До деревни: 5.5 км</span><div id="cargo">🍺 12 ЯЩИКОВ</div></div>
+<div id="hint" role="status"></div>
+<div id="joystick"><div id="knob"></div></div>
+<div id="pedals"><button id="brake">BRAKE / R</button><button id="gas">GAS</button></div>
+<button id="hand">РУЧНИК</button>
+<div id="drivetrain"><button id="low">HIGH</button><button id="center">C LOCK</button><button id="rear">R LOCK</button><button id="winch">ЛЕБЁДКА</button></div>
+<div id="status">HP <span id="hp">100</span> · БЕНЗИН <span id="fuel">100</span>% · <span id="kit">СТОК</span></div>
+</div>
+<div id="map-panel"><canvas id="fullmap" width="480" height="760"></canvas><button id="map-close">ЗАКРЫТЬ КАРТУ</button></div>
+<div id="landing"><h1>ПОСЛЕДНИЙ РЕЙС ЗА ПИВОМ</h1><p>3×6 км настоящего бездорожья. Стартовая Нива — сток. Ищи резину, лебёдку и шноркель. Выбери путь через большую реку, доберись до деревни и доставь 12 ящиков пива.</p><button class="enter" id="enter">ПОЕХАЛИ!</button><small>Первая игровая 3D-версия: физика четырёх колёс из Нивы 0.56. Улучшения и доставка работают; визуальные эффекты и препятствия продолжаем развивать.</small></div>
+<div id="result"><h1>🍺 ПИВО ДОСТАВЛЕНО!</h1><p>ДЕРЕВНЯ СПАСЕНА! КОЛХОЗНИКИ В ВОСТОРГЕ!</p><p id="result-time"></p><button id="again">НОВАЯ ЭКСПЕДИЦИЯ</button></div>
+<div id="rotate">ПОВЕРНИ ТЕЛЕФОН ГОРИЗОНТАЛЬНО ↻</div>
+<script src="./browser-guard.js?v=047"></script>
+<script type="module" src="./expedition-3d.js?v=058"></script>
+</body>
+</html>

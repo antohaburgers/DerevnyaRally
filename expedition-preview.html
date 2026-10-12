@@ -26,8 +26,8 @@ footer span{font-size:11px;color:#e0d5bf}footer button{white-space:nowrap}
 <main><canvas id="map" aria-label="Карта экспедиции с дорогами и рекой"></canvas>
 <div class="top"><div class="chip" id="info">Карта загружена. Нажми на точку или дорогу, чтобы изучить.</div><div class="chip" id="stats">—</div></div>
 <div class="legend">🟡 Склад / старт<br>🔧 Тюнинг<br>⛽ Заправка / ремонт<br>🍺 Доставка<br>🔵 Большая река<br>╌ Лесные дороги</div></main>
-<footer><button id="generate">↻ ДРУГАЯ КАРТА</button><span>Перетаскивай карту · разведи пальцы для масштаба</span><button id="fit">ВСЯ КАРТА</button></footer>
+<footer><button id="generate">↻ ДРУГАЯ КАРТА</button><button id="drive">🚙 В 3D</button><span>Перетаскивай карту · разведи пальцы для масштаба</span><button id="fit">ВСЯ КАРТА</button></footer>
 <div id="note">ТЕСТ ГЕНЕРАТОРА: пока только карта, без езды на Ниве</div>
-<script type="module" src="./expedition-preview.js?v=057"></script>
+<script>document.querySelector('#drive').onclick=()=>location.href='./expedition-3d.html';</script><script type="module" src="./expedition-preview.js?v=058"></script>
 </body>
 </html>
